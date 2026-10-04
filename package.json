@@ -3,9 +3,34 @@
   "private": true,
   "type": "module",
   "description": "BrandHub Café (cafe.brandhub.ma) and BrandHub Resto (resto.brandhub.ma): two products, one kit.",
-  "engines": { "node": ">=22.12" },
-  "workspaces": ["packages/*"],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/cafe/*",
+    "apps/resto/*",
+    "apps/station",
+    "tools"
+  ],
   "scripts": {
-    "test": "node --test \"packages/kit/test/*.test.js\""
+    "test": "node --test \"packages/*/test/**/*.test.js\" \"apps/*/*/test/**/*.test.js\" \"apps/station/test/**/*.test.js\" \"tools/test/**/*.test.js\"",
+    "typecheck": "node tools/scripts/typecheck.mjs",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "i18n": "node tools/scripts/i18n.mjs",
+    "budgets": "node tools/scripts/budgets.mjs",
+    "e2e": "playwright test --pass-with-no-tests",
+    "gate": "npm run typecheck && npm run lint && npm run i18n && npm test && npm run budgets"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "1.56.1",
+    "@types/node": "^22.20.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "typescript": "^5.9.3"
   }
 }

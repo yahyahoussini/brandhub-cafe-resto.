@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.wrangler/
+apps/station/out/
+test-results/
+playwright-report/
+coverage/
+package-lock.json
+
+# The pack as received: specifications, data and the provided kit keep their own layout.
+*.md
+docs/
+prompts/
+data/
+packages/kit/

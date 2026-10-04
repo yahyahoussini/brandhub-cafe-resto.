@@ -1,0 +1,7 @@
+{
+  "name": "@brandhub/cafe-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BrandHub Café PWA (Preact, Vite): /caisse, /serveur, /ecran, /gestion and account pages."
+}

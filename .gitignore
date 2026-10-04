@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.sqlite*
+apps/station/out/
+test-results/
+playwright-report/
+coverage/

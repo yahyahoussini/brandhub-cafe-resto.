@@ -1,0 +1,7 @@
+{
+  "name": "@brandhub/resto-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BrandHub Resto PWA (Preact, Vite): dining room, kitchen screens, food cost."
+}

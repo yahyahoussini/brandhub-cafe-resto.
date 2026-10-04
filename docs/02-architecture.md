@@ -14,7 +14,7 @@
 
 ## 2. Repository layout
 ```
-package.json                 npm workspaces: packages/*, apps/*
+package.json                 npm workspaces: packages/*, apps/cafe/*, apps/resto/*, apps/station, tools
 packages/kit/                pure rules (provided): money, ids, order, bank, receipts, escpos, timezone, crypto, licence, control-signature, journal
 packages/kit-web/            browser: db (Dexie), sync-client, station-client, print (webusb, webserial, raster), i18n, pin, ui (Preact components), licence-check
 packages/kit-worker/         Cloudflare: src/tenant-store (base Durable Object class), src/schema.sql + migrations, sync-api, auth-api, devices-api, control-api, reports, messaging, cron

@@ -15,11 +15,34 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
 | # | Prompt | State | Date | Notes |
 |---|---|---|---|---|
 | 00 | Orientation | done | 4 Oct 2026 | Node v22.22.0, `npm test` 75/75. 15 contradictions or gaps listed below (not applied). Gate 1 not run, pilot 1 not chosen. |
+| 01 | Repository scaffold | done | 4 Oct 2026 | Node v22.22.0, npm 10.9.4, TypeScript 5.9.3, ESLint 9.39.5, Prettier 3.9.9, Playwright 1.56.1. `npm ci && npm run gate` passes, 85 tests (kit 75 + `bh/logical-css` 10). Details below. |
 
 ## Current state
 - Kit: 75 unit tests passing (money, ids, order with moves and customers, bank with the bank guard, receipts, escpos,
   timezone, licence, control signature, journal).
-- Apps: not started.
+- Apps: not started. Empty workspaces exist (prompt 01): `@brandhub/kit-web`, `@brandhub/kit-worker`,
+  `@brandhub/cafe-worker`, `@brandhub/cafe-web`, `@brandhub/resto-worker`, `@brandhub/resto-web`, `@brandhub/station`,
+  `@brandhub/tools`.
+- Tooling (prompt 01):
+  - `npm run typecheck` (`tools/scripts/typecheck.mjs`) runs `tsc -p` on the root and every workspace that has source;
+    empty workspaces print "skipped (no source yet)". Web apps and `kit-web` use `moduleResolution: bundler` and the DOM lib.
+  - The kit's tsconfig checks `src/` only (with the DOM lib for `CryptoKey`). Its tests have no `// @ts-check` and are
+    not strict-clean (30 errors); they stay untouched as provided.
+  - `npm run lint`: ESLint 9 flat config with `@eslint/js` recommended, `bh/logical-css` (`tools/eslint/logical-css.js`,
+    tested), café↔resto import ban (relative path or package name), no relative imports into `packages/`, no
+    `parseFloat`/`toFixed` in `apps/**`, `no-console` (warn/error allowed in Station and Workers; console allowed in
+    `tools/**` and tests).
+  - Three rule options keep the provided kit lint-clean without editing it: `no-irregular-whitespace` skips regular
+    expressions, `no-unused-vars` ignores rest siblings, and console is allowed in tests.
+  - ESLint 9 instead of 10: ESLint 10 needs Node ≥ 22.13 and `engines` allows 22.12.
+  - Prettier (width 120) formats the new code only; it ignores `*.md`, `docs/`, `prompts/`, `data/` and `packages/kit/`,
+    so the pack keeps its layout. `npm run format` and `npm run format:check` are available; they are not part of the gate.
+  - `npm test` = `node --test` over `packages/*/test`, `apps/*/*/test`, `apps/station/test` and `tools/test`.
+  - `npm run e2e` = Playwright, 4 projects (`fr-360`, `fr-1280`, `ar-360`, `ar-1280`), passes with no tests.
+  - Playwright is pinned to 1.56.1 because that version uses the Chromium build preinstalled in the cloud sandbox
+    (`npx playwright install` is disabled there). On Yahya's computer, run `npx playwright install chromium` once.
+  - `npm run i18n` and `npm run budgets` are stubs until prompts 02 and 10.
+- docs/02 §2 workspace line aligned with prompt 01 (`apps/cafe/*`, `apps/resto/*`, `apps/station`, `tools`).
 - Repository: the pack is commit `5a6674a` in `yahyahoussini/brandhub-cafe-resto`. The build runs on
   `yahyahoussini/brandhub-cafe-resto.` (trailing dot), branch `claude/gallant-brown-cq49fc`. Both repositories are
   **public**; README §Before you start and docs/14 task 3 ask for a private one. Yahya to choose one repository and make it private
@@ -85,6 +108,13 @@ under D48, which sets three; docs/02 cites a shutdown order docs/13 lacks; train
 docs/14 has no task for several docs/11 §11 items (2, 3, 4, 6, 12, 13).
 
 ## Open items
+**Build (prompt 01)**
+- The GitHub repository is still public (task 3 asks for private); Yahya changes it in GitHub settings.
+- `dev:cafe`, `dev:resto`, `dev:station` (CLAUDE.md "Commands") need Wrangler, Vite and Electron. Prompts 04, 02/11
+  and 08 add them with those tools.
+- The kit tests are not type-checked (see Tooling). Adding `// @ts-check` and fixing them is a kit change; do it only
+  with Yahya's agreement (prompt 03 is the natural place).
+
 To confirm (from docs/11 §11, data flags and Darija drafts). Who confirms → needed by.
 
 **Accountant (client's)**

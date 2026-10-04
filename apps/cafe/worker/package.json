@@ -1,0 +1,7 @@
+{
+  "name": "@brandhub/cafe-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BrandHub Café Worker and CafeStore Durable Object (cafe.brandhub.ma)."
+}

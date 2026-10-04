@@ -1,0 +1,7 @@
+{
+  "name": "@brandhub/kit-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare side of the kit: TenantStore base Durable Object, sync, auth and control endpoints, cron helpers (prompts 04, 05, 07)."
+}

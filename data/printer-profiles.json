@@ -1,0 +1,78 @@
+{
+  "$comment": "Printer profiles (docs/05 §4). verified:false values are confirmed or corrected by the hardware test (prompt 09).",
+  "profiles": [
+    {
+      "key": "epson_tm_t20iii",
+      "name": "Epson TM-T20III",
+      "paperMm": 80,
+      "charsPerLine": 48,
+      "dots": 576,
+      "codePage1252": 16,
+      "cut": "partial",
+      "drawerPins": [
+        2,
+        5
+      ],
+      "interfaces": [
+        "usb",
+        "serial",
+        "ethernet"
+      ],
+      "notes": "Ethernet model also speaks ePOS-Print XML. Drawer: 6-pin modular connector, 24 V.",
+      "verified": false,
+      "source": "https://files.support.epson.com/pdf/pos/bulk/tm-t20iii_trg_en_reva.pdf"
+    },
+    {
+      "key": "xprinter_xp_v330n",
+      "name": "Xprinter XP-V330N",
+      "paperMm": 80,
+      "charsPerLine": 48,
+      "dots": 576,
+      "codePage1252": 16,
+      "cut": "partial",
+      "drawerPins": [
+        2
+      ],
+      "interfaces": [
+        "usb",
+        "ethernet",
+        "serial"
+      ],
+      "notes": "ESC/POS compatible per maker; code page number to verify.",
+      "verified": false,
+      "source": "https://www.xprintertech.com/xprinter-standard-small-receipt-printer-for-mall"
+    },
+    {
+      "key": "generic_58_bt",
+      "name": "Generic 58 mm Bluetooth",
+      "paperMm": 58,
+      "charsPerLine": 32,
+      "dots": 384,
+      "codePage1252": 16,
+      "cut": "none",
+      "drawerPins": [],
+      "interfaces": [
+        "bluetooth_classic"
+      ],
+      "notes": "Classic (SPP) vs BLE varies by model: test with Web Serial over Bluetooth.",
+      "verified": false
+    },
+    {
+      "key": "sunmi_inner",
+      "name": "Sunmi built-in printer",
+      "paperMm": 58,
+      "charsPerLine": 32,
+      "dots": 384,
+      "codePage1252": null,
+      "cut": "model_dependent",
+      "drawerPins": [],
+      "interfaces": [
+        "bluetooth_virtual_innerprinter",
+        "aidl"
+      ],
+      "notes": "Test the 'InnerPrinter' virtual Bluetooth device with Web Serial; otherwise prompt 45 (Capacitor plugin).",
+      "verified": false,
+      "source": "https://docs.sunmi.com/en/general-function-modules/printing-service/"
+    }
+  ]
+}

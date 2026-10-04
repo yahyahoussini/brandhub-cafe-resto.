@@ -1,0 +1,89 @@
+{
+  "$comment": "WhatsApp utility template 'rapport_du_soir' (docs/10 §3, D35). Variables cannot be empty: use '—'. The body starts and ends with fixed text (Meta rejects a template that starts or ends with a variable); the link is a URL button whose last part is the business date. Darija variant is a draft for Yahya to review before submission.",
+  "templateName": "rapport_du_soir",
+  "category": "UTILITY",
+  "variables": [
+    {
+      "n": 1,
+      "key": "venue"
+    },
+    {
+      "n": 2,
+      "key": "businessDateLabel"
+    },
+    {
+      "n": 3,
+      "key": "revenueTTC"
+    },
+    {
+      "n": 4,
+      "key": "comparison"
+    },
+    {
+      "n": 5,
+      "key": "tickets"
+    },
+    {
+      "n": 6,
+      "key": "averageTicket"
+    },
+    {
+      "n": 7,
+      "key": "cashGaps"
+    },
+    {
+      "n": 8,
+      "key": "doses"
+    },
+    {
+      "n": 9,
+      "key": "voidsAfterSend"
+    },
+    {
+      "n": 10,
+      "key": "noSales"
+    },
+    {
+      "n": 11,
+      "key": "lowStock"
+    }
+  ],
+  "bodies": {
+    "fr": "Rapport du {{1}} — {{2}}\nChiffre : {{3}} ({{4}})\nTickets : {{5}} · Panier moyen : {{6}}\nÉcarts caisse : {{7}}\nDoses : {{8}}\nAnnulations : {{9}} · Tiroir sans vente : {{10}}\nStock bas : {{11}}\nLe détail de la journée est dans BrandHub.",
+    "ar": "تقرير {{1}} — {{2}}\nرقم المعاملات: {{3}} ({{4}})\nالتذاكر: {{5}} · متوسط التذكرة: {{6}}\nفروقات الصندوق: {{7}}\nالجرعات: {{8}}\nالإلغاءات: {{9}} · فتح الدرج بدون بيع: {{10}}\nمخزون منخفض: {{11}}\nتفاصيل اليوم في BrandHub.",
+    "darija_draft": "التقرير ديال {{1}} — {{2}}\nالمدخول: {{3}} ({{4}})\nالتيكيات: {{5}} · المعدل: {{6}}\nالفرق فالكيسة: {{7}}\nالدوزات: {{8}}\nالإلغاءات: {{9}} · تحلات الكاسة بلا بيع: {{10}}\nالسلعة اللي قربات تسالي: {{11}}\nالتفاصيل كاملين فـ BrandHub."
+  },
+  "example": {
+    "venue": "Café Démo",
+    "businessDateLabel": "lundi 30 novembre 2026",
+    "revenueTTC": "106,00 DH",
+    "comparison": "première journée",
+    "tickets": "4",
+    "averageTicket": "26,50 DH",
+    "cashGaps": "Sara −5,00 DH",
+    "doses": "écart 2 doses (≈ 20,80 DH)",
+    "voidsAfterSend": "1",
+    "noSales": "1",
+    "lowStock": "—",
+    "buttonDate": "2026-11-30"
+  },
+  "button": {
+    "type": "URL",
+    "text": {
+      "fr": "Voir la journée",
+      "ar": "عرض اليوم"
+    },
+    "url": "https://cafe.brandhub.ma/gestion/jour/{{1}}",
+    "variable": "businessDate"
+  },
+  "comparisonForms": {
+    "fr": {
+      "firstDay": "première journée",
+      "change": "{percent} vs {weekday} dernier"
+    },
+    "ar": {
+      "firstDay": "اليوم الأول",
+      "change": "{percent} مقارنة مع {weekday} الماضي"
+    }
+  }
+}

@@ -1,0 +1,253 @@
+{
+  "$comment": "Default permissions (D38). A client may tighten any action; relaxing is allowed only down to 'floor'. 'approval' = an approver (canApprove) types their PIN; the approver id is written in the event. Checked in the app, re-checked on the server; the kit checks that approvedBy is present where required.",
+  "roles": [
+    "owner",
+    "manager",
+    "cashier",
+    "waiter",
+    "kitchen",
+    "accountant"
+  ],
+  "approvers": {
+    "default": [
+      "owner",
+      "manager"
+    ],
+    "note": "Any staff member can be flagged canApprove by the owner."
+  },
+  "actions": {
+    "sell": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter"
+      ]
+    },
+    "open_bank": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter"
+      ]
+    },
+    "count_own_bank": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter"
+      ]
+    },
+    "take_over": {
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "approval": "always",
+      "floor": "approval"
+    },
+    "discount": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier"
+      ],
+      "capBp": {
+        "owner": 10000,
+        "manager": 5000,
+        "cashier": 1000,
+        "waiter": 0
+      },
+      "aboveCap": "approval",
+      "floor": {
+        "cashierMaxBp": 2000
+      }
+    },
+    "void_line_unsent": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter"
+      ]
+    },
+    "void_line_sent": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter"
+      ],
+      "approval": "always",
+      "floor": "approval",
+      "exception": "held lines (not fired) need no approval"
+    },
+    "void_order": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter"
+      ],
+      "approval": "if_sent",
+      "floor": "approval_if_sent"
+    },
+    "payment_correction": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter"
+      ],
+      "approval": "after_2_min",
+      "floor": "approval_after_2_min"
+    },
+    "reprint": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter"
+      ],
+      "freeCount": 1,
+      "then": "approval",
+      "floor": {
+        "maxFree": 3
+      }
+    },
+    "no_sale": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier"
+      ],
+      "approval": "always",
+      "floor": "approval"
+    },
+    "cash_out": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier"
+      ],
+      "approval": "always",
+      "floor": "approval"
+    },
+    "staff_advance": {
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "approval": "always",
+      "floor": "approval"
+    },
+    "credit_note": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier"
+      ],
+      "approval": "always",
+      "floor": "approval"
+    },
+    "availability_86": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "kitchen"
+      ]
+    },
+    "kitchen_status": {
+      "roles": [
+        "owner",
+        "manager",
+        "kitchen"
+      ]
+    },
+    "clock": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter",
+        "kitchen"
+      ]
+    },
+    "catalog_edit": {
+      "roles": [
+        "owner",
+        "manager"
+      ]
+    },
+    "staff_edit": {
+      "roles": [
+        "owner"
+      ],
+      "note": "managers may reset PINs"
+    },
+    "pin_reset": {
+      "roles": [
+        "owner",
+        "manager"
+      ]
+    },
+    "devices": {
+      "roles": [
+        "owner",
+        "manager"
+      ],
+      "reauth": true
+    },
+    "settings": {
+      "roles": [
+        "owner"
+      ],
+      "reauth": true
+    },
+    "permissions_edit": {
+      "roles": [
+        "owner"
+      ],
+      "reauth": true
+    },
+    "reports_all": {
+      "roles": [
+        "owner",
+        "manager",
+        "accountant"
+      ]
+    },
+    "reports_own": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier",
+        "waiter",
+        "kitchen"
+      ]
+    },
+    "exports": {
+      "roles": [
+        "owner",
+        "accountant"
+      ],
+      "reauth": true
+    },
+    "deadletter_resolve": {
+      "roles": [
+        "owner",
+        "manager"
+      ]
+    },
+    "b2b_invoice": {
+      "roles": [
+        "owner",
+        "manager",
+        "cashier"
+      ]
+    }
+  }
+}

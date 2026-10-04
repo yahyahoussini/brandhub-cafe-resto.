@@ -1,0 +1,11 @@
+{
+  "name": "brandhub-cafe-resto",
+  "private": true,
+  "type": "module",
+  "description": "BrandHub Café (cafe.brandhub.ma) and BrandHub Resto (resto.brandhub.ma): two products, one kit.",
+  "engines": { "node": ">=22.12" },
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "test": "node --test \"packages/kit/test/*.test.js\""
+  }
+}

@@ -1,0 +1,324 @@
+{
+  "$comment": "Module keys switched on by the licence (D27). Keep in sync with docs/01-products.md §4. 'kit' = built once in packages/kit*, enabled per product.",
+  "cafe": [
+    {
+      "key": "till",
+      "fr": "Caisse comptoir",
+      "ar": "صندوق البيع",
+      "version": "V1",
+      "prompt": 12
+    },
+    {
+      "key": "waiter_banking",
+      "fr": "Caisse par serveur",
+      "ar": "صندوق لكل نادل",
+      "version": "V1",
+      "prompt": 13
+    },
+    {
+      "key": "tables",
+      "fr": "Tables et zones",
+      "ar": "الطاولات والمناطق",
+      "version": "V1",
+      "prompt": 13
+    },
+    {
+      "key": "shifts",
+      "fr": "Services et Z",
+      "ar": "الفترات وتقرير Z",
+      "version": "V1",
+      "prompt": 14
+    },
+    {
+      "key": "dose_counter",
+      "fr": "Compteur de doses",
+      "ar": "عداد الجرعات",
+      "version": "V1",
+      "prompt": 15
+    },
+    {
+      "key": "stock_light",
+      "fr": "Stock essentiel",
+      "ar": "المخزون الأساسي",
+      "version": "V1",
+      "prompt": 16
+    },
+    {
+      "key": "back_office",
+      "fr": "Gestion",
+      "ar": "التسيير",
+      "version": "V1",
+      "prompt": 17
+    },
+    {
+      "key": "evening_report",
+      "fr": "Rapport du soir",
+      "ar": "تقرير المساء",
+      "version": "V1",
+      "prompt": 18
+    },
+    {
+      "key": "borsat",
+      "fr": "Borsat (pourboires)",
+      "ar": "البورصط (الإكراميات)",
+      "version": "V1.1",
+      "prompt": 21,
+      "kit": true
+    },
+    {
+      "key": "kredi",
+      "fr": "Kredi (crédits clients)",
+      "ar": "البيع بالدين (الكريدي)",
+      "version": "V1.1",
+      "prompt": 22,
+      "kit": true
+    },
+    {
+      "key": "compliance_pack",
+      "fr": "Pack conformité",
+      "ar": "حزمة المطابقة",
+      "version": "V1.1",
+      "prompt": 23,
+      "kit": true
+    },
+    {
+      "key": "digital_receipt",
+      "fr": "Ticket numérique",
+      "ar": "الوصل الرقمي",
+      "version": "V1.1",
+      "prompt": 23,
+      "kit": true
+    },
+    {
+      "key": "ramadan_mode",
+      "fr": "Mode Ramadan",
+      "ar": "وضع رمضان",
+      "version": "V1.1",
+      "prompt": 24,
+      "kit": true
+    },
+    {
+      "key": "cup_cost",
+      "fr": "Coût de la tasse",
+      "ar": "تكلفة الكاس",
+      "version": "V1.1",
+      "prompt": 25
+    },
+    {
+      "key": "stamp_card",
+      "fr": "Carte de fidélité",
+      "ar": "بطاقة الوفاء",
+      "version": "V1.1",
+      "prompt": 26,
+      "kit": true
+    },
+    {
+      "key": "match_mode",
+      "fr": "Mode Match",
+      "ar": "وضع المباريات",
+      "version": "V2",
+      "prompt": 39,
+      "kit": true
+    },
+    {
+      "key": "order_book",
+      "fr": "Carnet de commandes",
+      "ar": "دفتر الطلبيات",
+      "version": "V2",
+      "prompt": 40,
+      "kit": true
+    },
+    {
+      "key": "table_yield",
+      "fr": "Rendement par table",
+      "ar": "مردودية الطاولة",
+      "version": "V2",
+      "prompt": 41
+    },
+    {
+      "key": "camera_link",
+      "fr": "Lien caméra",
+      "ar": "الربط مع الكاميرا",
+      "version": "V2",
+      "prompt": 42,
+      "kit": true
+    }
+  ],
+  "resto": [
+    {
+      "key": "station",
+      "fr": "Station",
+      "ar": "المحطة",
+      "version": "V1",
+      "prompt": 27,
+      "kit": true
+    },
+    {
+      "key": "menu",
+      "fr": "Carte et menus",
+      "ar": "القائمة والمنيوات",
+      "version": "V1",
+      "prompt": 27
+    },
+    {
+      "key": "floor_plan",
+      "fr": "Plan de salle",
+      "ar": "تصميم القاعة",
+      "version": "V1",
+      "prompt": 28
+    },
+    {
+      "key": "handheld",
+      "fr": "Prise de commande mobile",
+      "ar": "أخذ الطلبات بالهاتف",
+      "version": "V1",
+      "prompt": 29
+    },
+    {
+      "key": "kds",
+      "fr": "Écrans cuisine",
+      "ar": "شاشات المطبخ",
+      "version": "V1",
+      "prompt": 30
+    },
+    {
+      "key": "bills",
+      "fr": "Additions",
+      "ar": "الفواتير",
+      "version": "V1",
+      "prompt": 31
+    },
+    {
+      "key": "recipes",
+      "fr": "Recettes et coût matière",
+      "ar": "الوصفات وتكلفة المواد",
+      "version": "V1",
+      "prompt": 32
+    },
+    {
+      "key": "stock",
+      "fr": "Stock",
+      "ar": "المخزون",
+      "version": "V1",
+      "prompt": 33
+    },
+    {
+      "key": "suppliers",
+      "fr": "Fournisseurs",
+      "ar": "الموردون",
+      "version": "V1",
+      "prompt": 33
+    },
+    {
+      "key": "staff_clock",
+      "fr": "Personnel et pointage",
+      "ar": "المستخدمون والتوقيت",
+      "version": "V1",
+      "prompt": 34
+    },
+    {
+      "key": "borsat",
+      "fr": "Borsat (pourboires)",
+      "ar": "البورصط (الإكراميات)",
+      "version": "V1",
+      "prompt": 34,
+      "kit": true
+    },
+    {
+      "key": "compliance_pack",
+      "fr": "Pack conformité",
+      "ar": "حزمة المطابقة",
+      "version": "V1",
+      "prompt": 35,
+      "kit": true
+    },
+    {
+      "key": "back_office",
+      "fr": "Gestion",
+      "ar": "التسيير",
+      "version": "V1",
+      "prompt": 35
+    },
+    {
+      "key": "evening_report",
+      "fr": "Rapport du soir",
+      "ar": "تقرير المساء",
+      "version": "V1",
+      "prompt": 35
+    },
+    {
+      "key": "phone_delivery",
+      "fr": "Téléphone et livraison",
+      "ar": "الهاتف والتوصيل",
+      "version": "V1.1",
+      "prompt": 37
+    },
+    {
+      "key": "kredi",
+      "fr": "Comptes clients",
+      "ar": "حسابات الزبناء",
+      "version": "V1.1",
+      "prompt": 37,
+      "kit": true
+    },
+    {
+      "key": "direct_ordering",
+      "fr": "Commande directe",
+      "ar": "الطلب المباشر",
+      "version": "V1.1",
+      "prompt": 38
+    },
+    {
+      "key": "reservations",
+      "fr": "Réservations",
+      "ar": "الحجوزات",
+      "version": "V1.1",
+      "prompt": 39
+    },
+    {
+      "key": "match_mode",
+      "fr": "Mode Match",
+      "ar": "وضع المباريات",
+      "version": "V1.1",
+      "prompt": 39,
+      "kit": true
+    },
+    {
+      "key": "order_book",
+      "fr": "Carnet de commandes",
+      "ar": "دفتر الطلبيات",
+      "version": "V1.1",
+      "prompt": 40,
+      "kit": true
+    },
+    {
+      "key": "menu_engineering",
+      "fr": "Ingénierie du menu",
+      "ar": "هندسة القائمة",
+      "version": "V1.1",
+      "prompt": 41
+    },
+    {
+      "key": "camera_link",
+      "fr": "Lien caméra",
+      "ar": "الربط مع الكاميرا",
+      "version": "V2",
+      "prompt": 42,
+      "kit": true
+    },
+    {
+      "key": "delivery_inbox",
+      "fr": "Plateformes de livraison",
+      "ar": "منصات التوصيل",
+      "version": "V2",
+      "prompt": 43
+    },
+    {
+      "key": "multi_site",
+      "fr": "Multi-sites",
+      "ar": "عدة فروع",
+      "version": "V2",
+      "prompt": 44
+    }
+  ]
+}

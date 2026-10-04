@@ -1,0 +1,49 @@
+{
+  "$comment": "Tax defaults (D40, D41). Values marked toConfirm are settled with the client's accountant during onboarding. Sources: docs/research/facts-2026-09.md §A.",
+  "vat": {
+    "onSiteFoodAndDrinkBp": {
+      "value": 1000,
+      "status": "secondary_sources",
+      "sources": [
+        "https://www.upsilon-consulting.com/en/vat-in-morocco/",
+        "https://sahlcompta.ma/blog/tva-maroc-2026",
+        "https://rabat.eregulations.org/media/Formulaire%20de%20d%C3%A9claration%20de%20la%20TVA.pdf"
+      ]
+    },
+    "standardBp": {
+      "value": 2000,
+      "status": "secondary_sources"
+    },
+    "takeawayBp": {
+      "value": null,
+      "status": "toConfirm",
+      "note": "Not confirmed; ask the accountant. Until then the default rate applies and onboarding shows the question."
+    },
+    "deliveryBp": {
+      "value": null,
+      "status": "toConfirm",
+      "note": "A DGI answer of 16/06/2015 exists but could not be read."
+    }
+  },
+  "debitDeBoissons": {
+    "law": "Loi 47-06, art. 64-67",
+    "base": "drinks receipts excluding VAT, consumed on site",
+    "rangeBp": [
+      200,
+      1000
+    ],
+    "communes": {
+      "Casablanca": {
+        "rateBp": 800,
+        "source": "https://www.casablancacity.ma/fr/article/285/taxe-sur-debit-de-boissons"
+      },
+      "Salé": {
+        "rateBp": 500,
+        "source": "https://fr.villedesale.ma/taxe-sur-les-debits-de-boissons/"
+      }
+    },
+    "declaration": "within 30 days of starting; annual declaration before 1 April",
+    "payment": "quarterly, before the end of the month following each quarter",
+    "otherCommunes": "rate set by the commune; ask the client"
+  }
+}

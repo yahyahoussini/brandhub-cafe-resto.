@@ -1,0 +1,789 @@
+{
+  "$comment": "Template 'Café marocain' for onboarding (docs/06 §6). Prices are empty on purpose: the owner fills them. Deduction quantities are suggested examples marked suggested:true; the owner weighs his own. VAT 10% by default (D40).",
+  "categories": [
+    {
+      "key": "cafes",
+      "name": {
+        "fr": "Cafés",
+        "ar": "القهوة"
+      },
+      "station": "bar",
+      "taxClass": "drink"
+    },
+    {
+      "key": "thes",
+      "name": {
+        "fr": "Thés et infusions",
+        "ar": "الشاي والأعشاب"
+      },
+      "station": "bar",
+      "taxClass": "drink"
+    },
+    {
+      "key": "jus",
+      "name": {
+        "fr": "Jus et boissons fraîches",
+        "ar": "العصائر والمشروبات الباردة"
+      },
+      "station": "bar",
+      "taxClass": "drink"
+    },
+    {
+      "key": "viennoiseries",
+      "name": {
+        "fr": "Viennoiseries et pâtisseries",
+        "ar": "المعجنات والحلويات"
+      },
+      "station": "bar",
+      "taxClass": "food"
+    },
+    {
+      "key": "petitdej",
+      "name": {
+        "fr": "Petit-déjeuner",
+        "ar": "الفطور"
+      },
+      "station": "cuisine",
+      "taxClass": "food"
+    },
+    {
+      "key": "snacks",
+      "name": {
+        "fr": "Snacks",
+        "ar": "الوجبات الخفيفة"
+      },
+      "station": "cuisine",
+      "taxClass": "food"
+    }
+  ],
+  "modifierGroups": [
+    {
+      "key": "sucre",
+      "name": {
+        "fr": "Sucre",
+        "ar": "السكر"
+      },
+      "min": 0,
+      "max": 1,
+      "options": [
+        {
+          "key": "sans",
+          "name": {
+            "fr": "Sans sucre",
+            "ar": "بدون سكر"
+          },
+          "priceCentimes": 0
+        },
+        {
+          "key": "peu",
+          "name": {
+            "fr": "Peu sucré",
+            "ar": "سكر قليل"
+          },
+          "priceCentimes": 0
+        },
+        {
+          "key": "normal",
+          "name": {
+            "fr": "Normal",
+            "ar": "عادي"
+          },
+          "priceCentimes": 0
+        }
+      ]
+    },
+    {
+      "key": "lait",
+      "name": {
+        "fr": "Lait",
+        "ar": "الحليب"
+      },
+      "min": 0,
+      "max": 1,
+      "options": [
+        {
+          "key": "chaud",
+          "name": {
+            "fr": "Lait chaud",
+            "ar": "حليب ساخن"
+          },
+          "priceCentimes": 0
+        },
+        {
+          "key": "froid",
+          "name": {
+            "fr": "Lait froid",
+            "ar": "حليب بارد"
+          },
+          "priceCentimes": 0
+        }
+      ]
+    },
+    {
+      "key": "taille",
+      "name": {
+        "fr": "Taille",
+        "ar": "الحجم"
+      },
+      "min": 1,
+      "max": 1,
+      "options": [
+        {
+          "key": "normal",
+          "name": {
+            "fr": "Normal",
+            "ar": "عادي"
+          },
+          "priceCentimes": 0
+        },
+        {
+          "key": "grand",
+          "name": {
+            "fr": "Grand",
+            "ar": "كبير"
+          },
+          "priceCentimes": null
+        }
+      ]
+    },
+    {
+      "key": "supplement",
+      "name": {
+        "fr": "Supplément",
+        "ar": "إضافة"
+      },
+      "min": 0,
+      "max": 3,
+      "options": [
+        {
+          "key": "miel",
+          "name": {
+            "fr": "Miel",
+            "ar": "عسل"
+          },
+          "priceCentimes": null
+        },
+        {
+          "key": "amlou",
+          "name": {
+            "fr": "Amlou",
+            "ar": "أملو"
+          },
+          "priceCentimes": null
+        },
+        {
+          "key": "fromage",
+          "name": {
+            "fr": "Fromage",
+            "ar": "جبن"
+          },
+          "priceCentimes": null
+        },
+        {
+          "key": "oeuf",
+          "name": {
+            "fr": "Œuf",
+            "ar": "بيض"
+          },
+          "priceCentimes": null
+        }
+      ]
+    }
+  ],
+  "stockItems": [
+    {
+      "key": "cafe_grains",
+      "name": {
+        "fr": "Café en grains",
+        "ar": "حبوب القهوة"
+      },
+      "unit": "g"
+    },
+    {
+      "key": "lait",
+      "name": {
+        "fr": "Lait",
+        "ar": "الحليب"
+      },
+      "unit": "ml"
+    },
+    {
+      "key": "sucre",
+      "name": {
+        "fr": "Sucre",
+        "ar": "السكر"
+      },
+      "unit": "g"
+    },
+    {
+      "key": "the_vert",
+      "name": {
+        "fr": "Thé vert",
+        "ar": "الشاي الأخضر"
+      },
+      "unit": "g"
+    },
+    {
+      "key": "menthe",
+      "name": {
+        "fr": "Menthe (botte)",
+        "ar": "النعناع (ربطة)"
+      },
+      "unit": "piece"
+    },
+    {
+      "key": "oranges",
+      "name": {
+        "fr": "Oranges",
+        "ar": "البرتقال"
+      },
+      "unit": "g"
+    },
+    {
+      "key": "eau_50",
+      "name": {
+        "fr": "Eau minérale 50 cl",
+        "ar": "ماء معدني 50 سل"
+      },
+      "unit": "piece"
+    },
+    {
+      "key": "soda_33",
+      "name": {
+        "fr": "Soda 33 cl",
+        "ar": "مشروب غازي 33 سل"
+      },
+      "unit": "piece"
+    }
+  ],
+  "products": [
+    {
+      "name": {
+        "fr": "Café noir",
+        "ar": "قهوة سوداء"
+      },
+      "category": "cafes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 1,
+      "modifierGroups": [
+        "sucre"
+      ],
+      "deductions": [
+        {
+          "item": "cafe_grains",
+          "qtyMilli": 7000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Café noir double",
+        "ar": "قهوة سوداء مزدوجة"
+      },
+      "category": "cafes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 2,
+      "modifierGroups": [
+        "sucre"
+      ],
+      "deductions": [
+        {
+          "item": "cafe_grains",
+          "qtyMilli": 14000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Nss nss",
+        "ar": "نص نص"
+      },
+      "category": "cafes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 1,
+      "modifierGroups": [
+        "sucre"
+      ],
+      "deductions": [
+        {
+          "item": "cafe_grains",
+          "qtyMilli": 7000,
+          "suggested": true
+        },
+        {
+          "item": "lait",
+          "qtyMilli": 60000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Café crème",
+        "ar": "قهوة بالحليب"
+      },
+      "category": "cafes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 1,
+      "modifierGroups": [
+        "sucre",
+        "lait",
+        "taille"
+      ],
+      "deductions": [
+        {
+          "item": "cafe_grains",
+          "qtyMilli": 7000,
+          "suggested": true
+        },
+        {
+          "item": "lait",
+          "qtyMilli": 120000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Lait au café",
+        "ar": "حليب بالقهوة"
+      },
+      "category": "cafes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 1,
+      "modifierGroups": [
+        "sucre",
+        "taille"
+      ],
+      "deductions": [
+        {
+          "item": "cafe_grains",
+          "qtyMilli": 7000,
+          "suggested": true
+        },
+        {
+          "item": "lait",
+          "qtyMilli": 200000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Cappuccino",
+        "ar": "كابوتشينو"
+      },
+      "category": "cafes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 1,
+      "modifierGroups": [
+        "sucre"
+      ],
+      "deductions": [
+        {
+          "item": "cafe_grains",
+          "qtyMilli": 7000,
+          "suggested": true
+        },
+        {
+          "item": "lait",
+          "qtyMilli": 150000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Café latte",
+        "ar": "لاتيه"
+      },
+      "category": "cafes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 1,
+      "modifierGroups": [
+        "sucre"
+      ],
+      "deductions": [
+        {
+          "item": "cafe_grains",
+          "qtyMilli": 7000,
+          "suggested": true
+        },
+        {
+          "item": "lait",
+          "qtyMilli": 200000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Café américain",
+        "ar": "قهوة أمريكية"
+      },
+      "category": "cafes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 1,
+      "modifierGroups": [
+        "sucre"
+      ],
+      "deductions": [
+        {
+          "item": "cafe_grains",
+          "qtyMilli": 7000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Café glacé",
+        "ar": "قهوة مثلجة"
+      },
+      "category": "cafes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 1,
+      "modifierGroups": [
+        "sucre"
+      ],
+      "deductions": [
+        {
+          "item": "cafe_grains",
+          "qtyMilli": 7000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Thé à la menthe (verre)",
+        "ar": "أتاي بالنعناع (كأس)"
+      },
+      "category": "thes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "sucre"
+      ]
+    },
+    {
+      "name": {
+        "fr": "Thé à la menthe (théière)",
+        "ar": "أتاي بالنعناع (براد)"
+      },
+      "category": "thes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "sucre",
+        "taille"
+      ]
+    },
+    {
+      "name": {
+        "fr": "Thé noir",
+        "ar": "شاي أسود"
+      },
+      "category": "thes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "sucre"
+      ]
+    },
+    {
+      "name": {
+        "fr": "Verveine",
+        "ar": "لويزة"
+      },
+      "category": "thes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "sucre"
+      ]
+    },
+    {
+      "name": {
+        "fr": "Jus d'orange pressé",
+        "ar": "عصير البرتقال"
+      },
+      "category": "jus",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "sucre",
+        "taille"
+      ],
+      "deductions": [
+        {
+          "item": "oranges",
+          "qtyMilli": 500000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Jus d'avocat",
+        "ar": "عصير الأفوكادو"
+      },
+      "category": "jus",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "sucre",
+        "supplement"
+      ]
+    },
+    {
+      "name": {
+        "fr": "Panaché",
+        "ar": "بناشي"
+      },
+      "category": "jus",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "sucre"
+      ]
+    },
+    {
+      "name": {
+        "fr": "Jus de fraise",
+        "ar": "عصير الفراولة"
+      },
+      "category": "jus",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "sucre"
+      ]
+    },
+    {
+      "name": {
+        "fr": "Milkshake",
+        "ar": "ميلك شيك"
+      },
+      "category": "jus",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Eau minérale 50 cl",
+        "ar": "ماء معدني 50 سل"
+      },
+      "category": "jus",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "deductions": [
+        {
+          "item": "eau_50",
+          "qtyMilli": 1000
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Soda 33 cl",
+        "ar": "مشروب غازي 33 سل"
+      },
+      "category": "jus",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "deductions": [
+        {
+          "item": "soda_33",
+          "qtyMilli": 1000
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Croissant",
+        "ar": "كرواسون"
+      },
+      "category": "viennoiseries",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Pain au chocolat",
+        "ar": "خبز بالشوكولاتة"
+      },
+      "category": "viennoiseries",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Msemen",
+        "ar": "مسمن"
+      },
+      "category": "viennoiseries",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "supplement"
+      ]
+    },
+    {
+      "name": {
+        "fr": "Harcha",
+        "ar": "حرشة"
+      },
+      "category": "viennoiseries",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "supplement"
+      ]
+    },
+    {
+      "name": {
+        "fr": "Baghrir",
+        "ar": "بغرير"
+      },
+      "category": "viennoiseries",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "supplement"
+      ]
+    },
+    {
+      "name": {
+        "fr": "Batbout",
+        "ar": "بطبوط"
+      },
+      "category": "viennoiseries",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "supplement"
+      ]
+    },
+    {
+      "name": {
+        "fr": "Part de gâteau",
+        "ar": "قطعة حلوى"
+      },
+      "category": "viennoiseries",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Petit-déjeuner marocain",
+        "ar": "فطور مغربي"
+      },
+      "category": "petitdej",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 1
+    },
+    {
+      "name": {
+        "fr": "Omelette",
+        "ar": "أومليت"
+      },
+      "category": "petitdej",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "supplement"
+      ]
+    },
+    {
+      "name": {
+        "fr": "Œufs au khlii",
+        "ar": "بيض بالخليع"
+      },
+      "category": "petitdej",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Sandwich thon",
+        "ar": "سندويتش التونة"
+      },
+      "category": "snacks",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Panini poulet",
+        "ar": "بانيني بالدجاج"
+      },
+      "category": "snacks",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Crêpe",
+        "ar": "كريب"
+      },
+      "category": "snacks",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "modifierGroups": [
+        "supplement"
+      ]
+    }
+  ],
+  "zones": [
+    {
+      "key": "salle",
+      "name": {
+        "fr": "Salle",
+        "ar": "القاعة"
+      }
+    },
+    {
+      "key": "terrasse",
+      "name": {
+        "fr": "Terrasse",
+        "ar": "التراس"
+      }
+    }
+  ]
+}

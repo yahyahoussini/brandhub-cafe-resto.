@@ -1,0 +1,246 @@
+{
+  "$comment": "Staff words (D11). 'ar' is used in the app's Arabic interface; 'darija' only in WhatsApp messages, the quick card and support scripts, and every darija entry must be reviewed by Yahya before use.",
+  "status_darija": "draft_review_by_yahya",
+  "terms": [
+    {
+      "key": "till",
+      "fr": "Caisse",
+      "ar": "الصندوق",
+      "darija": "الكيسة"
+    },
+    {
+      "key": "cashier",
+      "fr": "Caissier",
+      "ar": "أمين الصندوق",
+      "darija": "مول الكيسة"
+    },
+    {
+      "key": "waiter",
+      "fr": "Serveur",
+      "ar": "النادل",
+      "darija": "السرباي"
+    },
+    {
+      "key": "manager",
+      "fr": "Gérant",
+      "ar": "المسير",
+      "darija": "الجيرون"
+    },
+    {
+      "key": "owner",
+      "fr": "Patron",
+      "ar": "صاحب المحل",
+      "darija": "مول المحل"
+    },
+    {
+      "key": "table",
+      "fr": "Table",
+      "ar": "الطاولة",
+      "darija": "الطبلة"
+    },
+    {
+      "key": "room",
+      "fr": "Salle",
+      "ar": "القاعة",
+      "darija": "الصالة"
+    },
+    {
+      "key": "terrace",
+      "fr": "Terrasse",
+      "ar": "التراس",
+      "darija": "التيراس"
+    },
+    {
+      "key": "bill",
+      "fr": "Addition",
+      "ar": "الحساب",
+      "darija": "الحساب"
+    },
+    {
+      "key": "pay",
+      "fr": "Payer",
+      "ar": "أداء",
+      "darija": "خلّص"
+    },
+    {
+      "key": "cash",
+      "fr": "Espèces",
+      "ar": "نقداً",
+      "darija": "كاش"
+    },
+    {
+      "key": "card",
+      "fr": "Carte",
+      "ar": "بطاقة",
+      "darija": "لاكارط"
+    },
+    {
+      "key": "change",
+      "fr": "Rendu",
+      "ar": "الباقي",
+      "darija": "الصرف"
+    },
+    {
+      "key": "receipt",
+      "fr": "Ticket",
+      "ar": "الوصل",
+      "darija": "التيكي"
+    },
+    {
+      "key": "void",
+      "fr": "Annuler",
+      "ar": "إلغاء",
+      "darija": "لغي"
+    },
+    {
+      "key": "discount",
+      "fr": "Remise",
+      "ar": "تخفيض",
+      "darija": "تخفيض"
+    },
+    {
+      "key": "hold",
+      "fr": "En attente",
+      "ar": "في الانتظار",
+      "darija": "خليها تسنى"
+    },
+    {
+      "key": "send_bar",
+      "fr": "Envoyer au bar",
+      "ar": "أرسل إلى البار",
+      "darija": "صيفط للبار"
+    },
+    {
+      "key": "send_kitchen",
+      "fr": "Envoyer en cuisine",
+      "ar": "أرسل إلى المطبخ",
+      "darija": "صيفط للكوزينة"
+    },
+    {
+      "key": "tip",
+      "fr": "Pourboire",
+      "ar": "إكرامية",
+      "darija": "البوربوار"
+    },
+    {
+      "key": "tip_pool",
+      "fr": "Borsat",
+      "ar": "البورصط",
+      "darija": "البورصط"
+    },
+    {
+      "key": "credit",
+      "fr": "Crédit (Kredi)",
+      "ar": "البيع بالدين",
+      "darija": "الكريدي"
+    },
+    {
+      "key": "gap",
+      "fr": "Écart",
+      "ar": "الفرق",
+      "darija": "الفرق"
+    },
+    {
+      "key": "doses",
+      "fr": "Doses",
+      "ar": "الجرعات",
+      "darija": "الدوزات"
+    },
+    {
+      "key": "shift",
+      "fr": "Service",
+      "ar": "الفترة",
+      "darija": "النوبة"
+    },
+    {
+      "key": "close_till",
+      "fr": "Fermer la caisse",
+      "ar": "إغلاق الصندوق",
+      "darija": "سد الكيسة"
+    },
+    {
+      "key": "clock_in",
+      "fr": "Pointer",
+      "ar": "تسجيل الحضور",
+      "darija": "بوانطي"
+    },
+    {
+      "key": "offline",
+      "fr": "Hors ligne",
+      "ar": "بدون اتصال",
+      "darija": "ماكاينش الأنترنيت"
+    },
+    {
+      "key": "synced",
+      "fr": "Synchronisé",
+      "ar": "متزامن",
+      "darija": "كلشي تصيفط"
+    },
+    {
+      "key": "pending_sync",
+      "fr": "En attente d'envoi",
+      "ar": "في انتظار الإرسال",
+      "darija": "باقي ما تصيفطش"
+    },
+    {
+      "key": "stock",
+      "fr": "Stock",
+      "ar": "المخزون",
+      "darija": "السلعة"
+    },
+    {
+      "key": "low_stock",
+      "fr": "Stock bas",
+      "ar": "مخزون منخفض",
+      "darija": "السلعة قربات تسالي"
+    },
+    {
+      "key": "out_of_stock",
+      "fr": "Rupture",
+      "ar": "نفد",
+      "darija": "سالا"
+    },
+    {
+      "key": "approval",
+      "fr": "Validation gérant",
+      "ar": "موافقة المسير",
+      "darija": "الجيرون خاصو يوافق"
+    },
+    {
+      "key": "evening_report",
+      "fr": "Rapport du soir",
+      "ar": "تقرير المساء",
+      "darija": "التقرير ديال الليل"
+    },
+    {
+      "key": "drawer",
+      "fr": "Tiroir-caisse",
+      "ar": "درج النقود",
+      "darija": "الكاسة ديال الفلوس"
+    },
+    {
+      "key": "float",
+      "fr": "Fond de caisse",
+      "ar": "رصيد البداية",
+      "darija": "الصرف ديال الصباح"
+    },
+    {
+      "key": "blind_count",
+      "fr": "Comptage",
+      "ar": "العد",
+      "darija": "حساب الفلوس"
+    },
+    {
+      "key": "reprint",
+      "fr": "Réimprimer",
+      "ar": "إعادة الطبع",
+      "darija": "عاود طبع"
+    },
+    {
+      "key": "take_over",
+      "fr": "Reprendre",
+      "ar": "استلام",
+      "darija": "شد"
+    }
+  ]
+}

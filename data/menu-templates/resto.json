@@ -1,0 +1,516 @@
+{
+  "$comment": "Template 'Restaurant marocain' for Resto onboarding. Prices empty; recipe quantities are suggested examples (suggested:true) to replace with the chef's. Stations: froid, chaud, grill, patisserie, bar.",
+  "stations": [
+    {
+      "key": "froid",
+      "name": {
+        "fr": "Froid",
+        "ar": "البارد"
+      }
+    },
+    {
+      "key": "chaud",
+      "name": {
+        "fr": "Chaud",
+        "ar": "الساخن"
+      }
+    },
+    {
+      "key": "grill",
+      "name": {
+        "fr": "Grill",
+        "ar": "الشواء"
+      }
+    },
+    {
+      "key": "patisserie",
+      "name": {
+        "fr": "Pâtisserie",
+        "ar": "الحلويات"
+      }
+    },
+    {
+      "key": "bar",
+      "name": {
+        "fr": "Bar",
+        "ar": "البار"
+      }
+    }
+  ],
+  "categories": [
+    {
+      "key": "entrees",
+      "name": {
+        "fr": "Entrées",
+        "ar": "المقبلات"
+      },
+      "station": "froid",
+      "taxClass": "food",
+      "course": 1
+    },
+    {
+      "key": "soupes",
+      "name": {
+        "fr": "Soupes et entrées chaudes",
+        "ar": "الشوربات والمقبلات الساخنة"
+      },
+      "station": "chaud",
+      "taxClass": "food",
+      "course": 1
+    },
+    {
+      "key": "tajines",
+      "name": {
+        "fr": "Tajines et plats",
+        "ar": "الطواجن والأطباق"
+      },
+      "station": "chaud",
+      "taxClass": "food",
+      "course": 2
+    },
+    {
+      "key": "grillades",
+      "name": {
+        "fr": "Grillades",
+        "ar": "المشويات"
+      },
+      "station": "grill",
+      "taxClass": "food",
+      "course": 2
+    },
+    {
+      "key": "desserts",
+      "name": {
+        "fr": "Desserts",
+        "ar": "التحلية"
+      },
+      "station": "patisserie",
+      "taxClass": "food",
+      "course": 3
+    },
+    {
+      "key": "boissons",
+      "name": {
+        "fr": "Boissons",
+        "ar": "المشروبات"
+      },
+      "station": "bar",
+      "taxClass": "drink",
+      "course": 1
+    },
+    {
+      "key": "ramadan",
+      "name": {
+        "fr": "Ftour (Ramadan)",
+        "ar": "الفطور (رمضان)"
+      },
+      "station": "chaud",
+      "taxClass": "food",
+      "course": 1,
+      "visible": false
+    }
+  ],
+  "stockItems": [
+    {
+      "key": "poulet",
+      "name": {
+        "fr": "Poulet",
+        "ar": "الدجاج"
+      },
+      "unit": "g"
+    },
+    {
+      "key": "viande_hachee",
+      "name": {
+        "fr": "Viande hachée",
+        "ar": "اللحم المفروم"
+      },
+      "unit": "g"
+    },
+    {
+      "key": "agneau",
+      "name": {
+        "fr": "Agneau",
+        "ar": "لحم الغنم"
+      },
+      "unit": "g"
+    },
+    {
+      "key": "citron_confit",
+      "name": {
+        "fr": "Citron confit",
+        "ar": "الحامض المصبر"
+      },
+      "unit": "piece"
+    },
+    {
+      "key": "olives",
+      "name": {
+        "fr": "Olives",
+        "ar": "الزيتون"
+      },
+      "unit": "g"
+    },
+    {
+      "key": "tomates",
+      "name": {
+        "fr": "Tomates",
+        "ar": "الطماطم"
+      },
+      "unit": "g"
+    },
+    {
+      "key": "oeufs",
+      "name": {
+        "fr": "Œufs",
+        "ar": "البيض"
+      },
+      "unit": "piece"
+    },
+    {
+      "key": "semoule",
+      "name": {
+        "fr": "Semoule",
+        "ar": "السميد"
+      },
+      "unit": "g"
+    },
+    {
+      "key": "pain",
+      "name": {
+        "fr": "Pain",
+        "ar": "الخبز"
+      },
+      "unit": "piece"
+    }
+  ],
+  "products": [
+    {
+      "name": {
+        "fr": "Salade marocaine",
+        "ar": "سلطة مغربية"
+      },
+      "category": "entrees",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "recipe": [
+        {
+          "item": "tomates",
+          "qtyMilli": 150000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Zaalouk",
+        "ar": "زعلوك"
+      },
+      "category": "entrees",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Harira",
+        "ar": "حريرة"
+      },
+      "category": "soupes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Bissara",
+        "ar": "بيصارة"
+      },
+      "category": "soupes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Briouates (6)",
+        "ar": "بريوات (6)"
+      },
+      "category": "soupes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Pastilla au poulet",
+        "ar": "بسطيلة بالدجاج"
+      },
+      "category": "soupes",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Tajine poulet citron olives",
+        "ar": "طاجين الدجاج بالحامض والزيتون"
+      },
+      "category": "tajines",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "recipe": [
+        {
+          "item": "poulet",
+          "qtyMilli": 250000,
+          "suggested": true
+        },
+        {
+          "item": "citron_confit",
+          "qtyMilli": 500,
+          "suggested": true
+        },
+        {
+          "item": "olives",
+          "qtyMilli": 30000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Tajine kefta aux œufs",
+        "ar": "طاجين الكفتة بالبيض"
+      },
+      "category": "tajines",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "recipe": [
+        {
+          "item": "viande_hachee",
+          "qtyMilli": 200000,
+          "suggested": true
+        },
+        {
+          "item": "oeufs",
+          "qtyMilli": 2000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Tajine agneau aux pruneaux",
+        "ar": "طاجين لحم الغنم بالبرقوق"
+      },
+      "category": "tajines",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Couscous aux sept légumes",
+        "ar": "كسكس بسبع خضاري"
+      },
+      "category": "tajines",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Tanjia",
+        "ar": "طنجية"
+      },
+      "category": "tajines",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Rfissa",
+        "ar": "رفيسة"
+      },
+      "category": "tajines",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Brochettes kefta",
+        "ar": "قطبان الكفتة"
+      },
+      "category": "grillades",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "recipe": [
+        {
+          "item": "viande_hachee",
+          "qtyMilli": 250000,
+          "suggested": true
+        }
+      ]
+    },
+    {
+      "name": {
+        "fr": "Brochettes de poulet",
+        "ar": "قطبان الدجاج"
+      },
+      "category": "grillades",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Poisson du jour (au kg)",
+        "ar": "سمك اليوم (بالكيلو)"
+      },
+      "category": "grillades",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "soldByWeight": true
+    },
+    {
+      "name": {
+        "fr": "Salade d'oranges à la cannelle",
+        "ar": "سلطة البرتقال بالقرفة"
+      },
+      "category": "desserts",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Pastilla au lait",
+        "ar": "بسطيلة بالحليب"
+      },
+      "category": "desserts",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Thé à la menthe (théière)",
+        "ar": "أتاي بالنعناع (براد)"
+      },
+      "category": "boissons",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Jus d'orange pressé",
+        "ar": "عصير البرتقال"
+      },
+      "category": "boissons",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Eau minérale 1,5 L",
+        "ar": "ماء معدني 1.5 لتر"
+      },
+      "category": "boissons",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Soda 33 cl",
+        "ar": "مشروب غازي 33 سل"
+      },
+      "category": "boissons",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0
+    },
+    {
+      "name": {
+        "fr": "Ftour complet",
+        "ar": "فطور رمضان كامل"
+      },
+      "category": "ramadan",
+      "priceCentimes": null,
+      "vatBp": 1000,
+      "doses": 0,
+      "setMenu": true
+    }
+  ],
+  "setMenus": [
+    {
+      "key": "menu_du_jour",
+      "name": {
+        "fr": "Menu du jour",
+        "ar": "قائمة اليوم"
+      },
+      "priceCentimes": null,
+      "steps": [
+        {
+          "name": {
+            "fr": "Entrée",
+            "ar": "المقبلات"
+          },
+          "category": "entrees",
+          "min": 1,
+          "max": 1
+        },
+        {
+          "name": {
+            "fr": "Plat",
+            "ar": "الطبق الرئيسي"
+          },
+          "category": "tajines",
+          "min": 1,
+          "max": 1
+        },
+        {
+          "name": {
+            "fr": "Dessert",
+            "ar": "التحلية"
+          },
+          "category": "desserts",
+          "min": 1,
+          "max": 1
+        }
+      ]
+    }
+  ],
+  "zones": [
+    {
+      "key": "salle",
+      "name": {
+        "fr": "Salle",
+        "ar": "القاعة"
+      }
+    },
+    {
+      "key": "terrasse",
+      "name": {
+        "fr": "Terrasse",
+        "ar": "التراس"
+      }
+    },
+    {
+      "key": "etage",
+      "name": {
+        "fr": "Étage",
+        "ar": "الطابق"
+      }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@brandhub/kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared business rules, sync, printing and licence for BrandHub Café and BrandHub Resto.",
+  "exports": {
+    "./money": "./src/money.js",
+    "./ids": "./src/ids.js",
+    "./order": "./src/order.js",
+    "./bank": "./src/bank.js",
+    "./receipts": "./src/receipts.js",
+    "./escpos": "./src/escpos.js",
+    "./timezone": "./src/timezone.js",
+    "./crypto": "./src/crypto.js",
+    "./licence": "./src/licence.js",
+    "./control-signature": "./src/control-signature.js",
+    "./journal": "./src/journal.js"
+  }
+}

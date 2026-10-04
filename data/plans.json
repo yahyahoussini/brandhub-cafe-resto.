@@ -1,0 +1,71 @@
+{
+  "$comment": "Plans and limits carried by the licence (D7, D27). Prices are proposals to test with pilots 2-5 and confirm at Gate 2 (15 Jan 2027). Amounts in centimes HT. Every plan lists every limit key; a missing key means 0.",
+  "status": "to_test",
+  "plans": [
+    {
+      "key": "cafe",
+      "product": "cafe",
+      "limits": {
+        "sites": 1,
+        "tills": 1,
+        "handhelds": 5,
+        "screens": 1,
+        "stations": 1
+      },
+      "priceMonthlyHT": 19900,
+      "priceAnnualHT": 203000,
+      "setupHT": 99000
+    },
+    {
+      "key": "resto",
+      "product": "resto",
+      "limits": {
+        "sites": 1,
+        "tills": 2,
+        "handhelds": 99,
+        "screens": 99,
+        "stations": 1
+      },
+      "priceMonthlyHT": 39900,
+      "priceAnnualHT": 407000,
+      "setupHT": 249000
+    },
+    {
+      "key": "pilot_cafe",
+      "product": "cafe",
+      "limits": {
+        "sites": 1,
+        "tills": 1,
+        "handhelds": 5,
+        "screens": 1,
+        "stations": 1
+      },
+      "priceMonthlyHT": 0,
+      "durationMonths": 3
+    },
+    {
+      "key": "pilot_resto",
+      "product": "resto",
+      "limits": {
+        "sites": 1,
+        "tills": 2,
+        "handhelds": 99,
+        "screens": 99,
+        "stations": 1
+      },
+      "priceMonthlyHT": 0,
+      "durationMonths": 3
+    }
+  ],
+  "addons": [
+    {
+      "key": "extra_till",
+      "product": "both",
+      "limits": {
+        "tills": 1
+      },
+      "priceMonthlyHT": 4900
+    }
+  ],
+  "vatOnSubscriptionBp": 2000
+}

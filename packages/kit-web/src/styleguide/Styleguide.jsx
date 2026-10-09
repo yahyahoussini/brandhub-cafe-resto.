@@ -7,6 +7,7 @@ import {
   Button,
   EmptyState,
   ErrorBanner,
+  Icon,
   Input,
   Keypad,
   Pill,
@@ -20,7 +21,8 @@ import {
   cx,
   syncState,
 } from "../ui/index.js";
-import { DEMO_BANKS, DEMO_RECEIPT_NO, DEMO_REVENUE, demoProducts } from "./demo-data.js";
+import { CircleCheck, TriangleAlert } from "lucide-preact";
+import { DEMO_BANKS, DEMO_PRICE_SOURCE, DEMO_RECEIPT_NO, DEMO_REVENUE, demoProducts } from "./demo-data.js";
 
 /** @typedef {"light" | "dark"} Theme */
 
@@ -48,6 +50,9 @@ const SWATCHES = [
   ["--bh-danger", "bg-danger"],
   ["--bh-danger-soft", "bg-danger-soft"],
 ];
+
+/** Bank gap states of docs/07 §6: the colour is on the icon, the amount stays in the body colour (D13). */
+const GAP_ICON = { ok: "text-ok", warn: "text-warn", danger: "text-danger" };
 
 /** @param {Theme} theme */
 export function applyTheme(theme) {
@@ -119,7 +124,8 @@ export function Styleguide({ product, theme, onTheme }) {
   const [qty, setQty] = useState(2);
   const [entry, setEntry] = useState("5000");
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [toast, setToast] = useState(/** @type {string | null} */ (null));
+  const [toast, setToast] = useState(/** @type {{ message: string, id: number } | null} */ (null));
+  const showToast = (/** @type {string} */ message) => setToast((prev) => ({ message, id: (prev?.id ?? 0) + 1 }));
   const [approval, setApproval] = useState(false);
   const now = Date.UTC(2026, 10, 30, 9, 0);
 
@@ -209,6 +215,9 @@ export function Styleguide({ product, theme, onTheme }) {
               <Button variant="secondary" state="pressed">
                 {t("term.send_bar")}
               </Button>
+              <Button variant="danger" state="pressed">
+                {t("term.void")}
+              </Button>
             </div>
           </State>
           <State state="disabled">
@@ -228,7 +237,9 @@ export function Styleguide({ product, theme, onTheme }) {
         </Section>
 
         <Section title={t("styleguide.sections.tile")}>
-          <p class="w-full text-body text-text-2">{t("styleguide.demo_prices")}</p>
+          <p class="w-full text-body text-text-2">
+            {t("styleguide.demo_prices", { section: DEMO_PRICE_SOURCE[product] })}
+          </p>
           <div class="grid w-full grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-3">
             {priced.map((p, i) => (
               <Tile
@@ -245,8 +256,17 @@ export function Styleguide({ product, theme, onTheme }) {
           <State state="selected">
             <Tile name={name(priced[0].name)} priceCentimes={priced[0].priceCentimes} selected />
           </State>
+          <State state="pressed">
+            <Tile name={name(priced[1].name)} priceCentimes={priced[1].priceCentimes} state="pressed" />
+          </State>
           <State state="disabled">
             <Tile name={name(priced[1].name)} priceCentimes={priced[1].priceCentimes} disabled />
+          </State>
+          <State state="out_of_stock">
+            <Tile name={name(priced[2].name)} priceCentimes={priced[2].priceCentimes} outOfStock />
+          </State>
+          <State state="empty">
+            <Tile name={name(unpriced.name)} priceCentimes={null} />
           </State>
         </Section>
 
@@ -277,7 +297,7 @@ export function Styleguide({ product, theme, onTheme }) {
 
         <Section title={t("styleguide.sections.pinpad")}>
           <State state="default">
-            <PinPad onComplete={() => setToast(t("styleguide.toast_printed"))} initialCount={2} />
+            <PinPad onComplete={() => showToast(t("styleguide.toast_printed"))} initialCount={2} />
           </State>
           <State state="error">
             <PinPad onComplete={() => {}} error={t("approval.wrong_pin")} />
@@ -316,10 +336,10 @@ export function Styleguide({ product, theme, onTheme }) {
           <State state="success">
             <Toast inline message={t("styleguide.toast_printed")} />
           </State>
-          <Button variant="secondary" onClick={() => setToast(t("styleguide.toast_printed"))}>
+          <Button variant="secondary" onClick={() => showToast(t("styleguide.toast_printed"))}>
             {t("term.reprint")}
           </Button>
-          {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+          {toast && <Toast message={toast.message} showId={toast.id} onDone={() => setToast(null)} />}
         </Section>
 
         <Section title={t("styleguide.sections.sync")}>
@@ -398,8 +418,24 @@ export function Styleguide({ product, theme, onTheme }) {
                   key: "gap",
                   label: t("term.gap"),
                   align: "end",
-                  render: (r) => <Amount centimes={r.gap} class={r.gap === 0 ? "text-text" : "text-danger"} />,
+                  render: (r) => (
+                    <span class="inline-flex items-center gap-1.5">
+                      <Icon icon={r.state === "ok" ? CircleCheck : TriangleAlert} class={GAP_ICON[r.state]} />
+                      <Amount centimes={r.gap} />
+                    </span>
+                  ),
                 },
+              ]}
+            />
+          </State>
+          <State state="loading" class="w-full max-w-[44rem]">
+            <Table
+              loading
+              rowKey={(r) => r.id}
+              rows={DEMO_BANKS}
+              columns={[
+                { key: "staffKey", label: t("styleguide.col_staff") },
+                { key: "gap", label: t("term.gap"), align: "end" },
               ]}
             />
           </State>
@@ -408,7 +444,7 @@ export function Styleguide({ product, theme, onTheme }) {
               rowKey={(r) => r.id}
               rows={/** @type {typeof DEMO_BANKS} */ ([])}
               columns={[
-                { key: "staff", label: t("styleguide.col_staff") },
+                { key: "staffKey", label: t("styleguide.col_staff") },
                 { key: "gap", label: t("term.gap"), align: "end" },
               ]}
               empty={<EmptyState title={t("empty.sales_today")} />}
@@ -432,6 +468,9 @@ export function Styleguide({ product, theme, onTheme }) {
               onApprove={() => {}}
               onCancel={() => {}}
             />
+          </State>
+          <State state="loading">
+            <ApprovalDialog open inline initialReason="breakage" loading onApprove={() => {}} onCancel={() => {}} />
           </State>
           <Button variant="secondary" onClick={() => setApproval(true)}>
             {t("term.approval")}

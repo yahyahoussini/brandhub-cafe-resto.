@@ -1,11 +1,12 @@
 // @ts-check
 import { ShieldCheck } from "lucide-preact";
-import { useId, useState } from "preact/hooks";
+import { useEffect, useId, useRef, useState } from "preact/hooks";
 import { t } from "../i18n/index.js";
 import { Button } from "./Button.jsx";
 import { cx } from "./cx.js";
 import { Icon } from "./Icon.jsx";
 import { PinPad } from "./PinPad.jsx";
+import { useModal } from "./useModal.js";
 
 /** The reason list of docs/06 §1; the key is stored in the event's `reason`, the label is translated. */
 export const APPROVAL_REASONS = /** @type {const} */ (["error", "customer_left", "comped", "breakage", "other"]);
@@ -13,7 +14,8 @@ export const APPROVAL_REASONS = /** @type {const} */ (["error", "customer_left",
 
 /**
  * "Validation gérant" (docs/06 §1): the manager picks a reason, then types his PIN on the same device. The caller
- * checks the PIN offline and records the approval in the event (`approvedBy`), never a shared password.
+ * checks the PIN offline and records the approval in the event (`approvedBy`), never a shared password. Each opening
+ * starts with no reason (or `initialReason`); Escape or Annuler calls `onCancel`; focus stays inside while it is open.
  * @param {{
  *   open: boolean,
  *   onApprove: (approval: { pin: string, reason: ApprovalReason }) => void,
@@ -35,11 +37,20 @@ export function ApprovalDialog({
   loading = false,
   inline = false,
 }) {
-  const [reason, setReason] = useState(/** @type {ApprovalReason | undefined} */ (initialReason));
+  const [picked, setReason] = useState(/** @type {ApprovalReason | undefined} */ (initialReason));
   const titleId = useId();
+  const panelRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  // Every opening starts from the caller's reason: a reason left from the previous approval must never be recorded.
+  useEffect(() => {
+    if (open) setReason(initialReason);
+  }, [open]);
+  useModal(panelRef, open && !inline, onCancel);
   if (!open) return null;
+  const reason = picked && reasons.includes(picked) ? picked : undefined;
   const panel = (
     <div
+      ref={panelRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal={inline ? undefined : "true"}
       aria-labelledby={titleId}
@@ -51,7 +62,7 @@ export function ApprovalDialog({
       </h2>
       <fieldset class="flex flex-col gap-2">
         <legend class="mb-2 label text-text-2">{t("approval.reason")}</legend>
-        <div role="radiogroup" class="flex flex-wrap gap-2">
+        <div role="radiogroup" aria-label={t("approval.reason")} class="flex flex-wrap gap-2">
           {reasons.map((r) => (
             <button
               key={r}
@@ -85,10 +96,11 @@ export function ApprovalDialog({
     </div>
   );
   if (inline) return panel;
+  // The overlay scrolls: on a short screen (1024 × 600 tablet, landscape phone) the title and Annuler stay reachable.
   return (
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black/40" aria-hidden="true" />
-      <div class="relative w-full max-w-[28rem]">{panel}</div>
+    <div class="fixed inset-0 z-50 flex overflow-y-auto p-4">
+      <div class="fixed inset-0 bg-black/40" aria-hidden="true" />
+      <div class="relative m-auto w-full max-w-[28rem]">{panel}</div>
     </div>
   );
 }

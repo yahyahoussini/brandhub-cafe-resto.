@@ -37,6 +37,15 @@ test("a clock behind the last contact never gives negative minutes", () => {
   assert.equal(syncState({ pending: 0, lastContactAt: now + 60_000, now }).minutes, 0);
 });
 
+test("a missing or malformed contact time is an error, never a green badge", () => {
+  assert.throws(() => syncState({ pending: 0, lastContactAt: /** @type {any} */ (undefined), now }), RangeError);
+  assert.throws(
+    () => syncState({ pending: 0, lastContactAt: /** @type {any} */ ("2026-11-30T09:00:00Z"), now }),
+    RangeError,
+  );
+  assert.throws(() => syncState({ pending: 0, lastContactAt: now, now: NaN }), RangeError);
+});
+
 test("pending must be a count", () => {
   assert.throws(() => syncState({ pending: -1, lastContactAt: now, now }), RangeError);
   assert.throws(() => syncState({ pending: 1.5, lastContactAt: now, now }), RangeError);

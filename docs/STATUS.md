@@ -16,7 +16,7 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
 |---|---|---|---|---|
 | 00 | Orientation | done | 4 Oct 2026 | Node v22.22.0, `npm test` 75/75. 15 contradictions or gaps listed below (not applied). Gate 1 not run, pilot 1 not chosen. |
 | 01 | Repository scaffold | done | 4 Oct 2026 | Node v22.22.0, npm 10.9.4, TypeScript 5.9.3, ESLint 9.39.5, Prettier 3.9.9, Playwright 1.56.1. `npm ci && npm run gate` passes, 94 tests (kit 75 + `bh/logical-css` 19). Details below. |
-| 02 | Design system, fonts, UI parts, i18n | done | 9 Oct 2026 | `npm run gate` passes, 107 tests. `npm run contrast`: 52/52 used pairs pass. 16 Playwright runs pass, no external host. UI kit 9.9 KB gzip (21.2 KB with Preact, signals, Lucide), CSS 5.0 KB, fonts 208 KB. Details below. |
+| 02 | Design system, fonts, UI parts, i18n | done | 9 Oct 2026 | `npm run gate` passes, 109 tests. `npm run contrast`: 52/52 used pairs pass. 21 Playwright runs pass (16 style guide, 5 behaviour), no external host. UI kit 10.4 KB gzip (21.7 KB with Preact, signals, Lucide), CSS 5.0 KB, fonts 208 KB. Review fixes in a second commit. Details below. |
 
 ## Current state
 - Kit: 75 unit tests passing (money, ids, order with moves and customers, bank with the bank guard, receipts, escpos,
@@ -59,11 +59,20 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
   - Before commit, three review agents checked the scaffold and a second pass tried to disprove each finding. The confirmed
     findings are fixed in `fix(tooling): close lint and type-check gaps found in review`.
 - Design system and UI kit (prompt 02), `packages/kit-web`:
-  - `src/ui/tokens.css`: every value of docs/07 §2–§4 as `--bh-*` custom properties.
-    - Light by default; dark from `prefers-color-scheme`, or forced with `data-theme="dark"`. The two dark blocks are
-      identical (`npm run contrast` checks this).
+  - `src/ui/tokens.css`: every value of docs/07 §2–§4 as `--bh-*` custom properties (colours, type, radius, seam,
+    4 px grid, paddings 16/24, gaps 32/48, gutters 24/40, reading column 860 px, motion 120/160 ms, kitchen flash
+    2 × 300 ms).
+    - Light by default; dark from `prefers-color-scheme`, or forced with `data-theme="dark"`. Any element can carry
+      `data-theme` to theme its subtree (a light till inside a dark frame), with the full colour block.
+    - `npm run contrast` checks that the two dark blocks are identical and that no colour is declared outside the
+      three colour blocks.
+    - Font stacks end with the other script's bundled family, so Latin and Arabic glyphs never fall back to a system
+      font.
     - Arabic (`html[lang="ar"]`): IBM Plex Sans Arabic for the interface, Noto Kufi Arabic for display, 106.66 % size,
       labels in weight 700 instead of letter-spacing.
+    - The 106.66 % root size of docs/07 §3 scales every rem size, so in Arabic the docs/07 §5 sizes are 6.66 %
+      larger (key 68 × 60 instead of 64 × 56). D12 sets minimums, so this is allowed. Exact sizes are checked in
+      French.
   - `src/ui/theme.css`: Tailwind 4 `@theme inline` mapping the tokens.
     - Tailwind's default colours, radii, shadows, fonts and text sizes are removed, so only docs/07 tokens exist.
     - Utilities `label`, `amount` (DM Serif Display, tabular figures, `dir=ltr`, no wrap) and `seam`.
@@ -83,15 +92,27 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
     `<html>`), `dir()`, `setDigits("latn" | "arab")`, `formatAmount` (the kit's, in the user's digits), `addMessages`
     for each app's own strings.
     - Locale and digits are signals, so components update when they change.
-    - `fr.json` and `ar.json` hold 127 keys; `term.*` is the glossary (fr, ar), never Darija.
+    - `fr.json` and `ar.json` hold 128 keys; `term.*` is the glossary (fr, ar), never Darija.
+    - Arabic-Indic digits use the Arabic separators: `١٬٢٥٠٫٥٠ درهم`.
+    - A message missing in Arabic falls back to French with the French plural rule.
   - `npm run i18n` (in the gate) checks every `i18n/` folder of every workspace:
     - the same keys in fr and ar, no empty string, the same `{placeholders}`;
-    - plural categories complete (fr one/other, ar all six);
-    - `term.*` equal to the glossary, and no Darija in `ar.json`;
+    - plural categories complete (fr one/other, ar all six), each form keeping its placeholders;
+    - `term.*` equal to the glossary in every folder, and no app redefining a kit string;
+    - no Darija word of the glossary in `ar.json`, whatever its article or diacritics;
+    - no French left untranslated in `ar.json`;
     - every literal `t("…")` key exists.
   - Style guide (dev only): `npm run styleguide:cafe` / `styleguide:resto` opens `/styleguide` on the app's Vite dev
     server (ports 5173 and 5174).
-    - Every component in every state of docs/06 §8.
+    - Each component in the docs/06 §8 states that apply to it:
+      - Button: default, pressed, disabled, loading, office size.
+      - Tile: default, selected, pressed, disabled, out of stock, no price.
+      - Stepper: default, minimum, disabled. Keypad: default, disabled.
+      - PinPad: default, error, loading. Input: empty, filled, error, disabled, office size.
+      - SyncBadge: success, pending, offline. Pill: the kitchen and stock states.
+      - Table: default, loading, empty. ApprovalDialog: default, selected, error, loading.
+      - Sheet, Toast, EmptyState, ErrorBanner: their one state, plus the live versions behind a button.
+      - States that do not apply (a loading Toast, an offline Keypad) are not drawn.
     - Switches for French/Arabic, light/dark and Western/Arabic-Indic digits; the URL keeps `?lang&theme&digits`.
     - Demo products come from the menu templates, with the demo prices of docs/01 §6 and §7 (labelled as such).
   - `npm run contrast`: 26 text/background pairs the components use, light and dark (52 checks, all pass), plus the
@@ -101,11 +122,22 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
     - the bundled fonts load;
     - tiles ≥ 96 × 96 and keys ≥ 64 × 56;
     - only `localhost` is contacted (network log `test-results/styleguide/*.network.json`).
-    It saves full-page screenshots. The four café variants at 1280 px are kept in `docs/screenshots/02-styleguide/`.
+    - the number of tiles and keys found (so the size checks cannot pass on nothing);
+    - exact sizes in French (keys 64 × 56, staff buttons 56, office buttons 40);
+    - the selected tile's 3 px start bar, and no horizontal page scroll at 360 px.
+    It saves full-page screenshots. Kept in `docs/screenshots/02-styleguide/`: the café at 1280 px in the four
+    variants and at 360 px in French and Arabic.
+  - `e2e/ui-behaviour.spec.js` (5 tests, French tablet):
+    - modal focus trap, Escape and focus return (ApprovalDialog, Sheet);
+    - a reopened approval never keeps the previous reason;
+    - the stepper keeps keyboard focus at its minimum;
+    - the toast's 4 s restarts when shown again.
   - `npm run size:ui`: gzip size of the UI kit, the CSS and the fonts.
   - Lint additions:
     - `bh/jsx-uses-vars`: components used in JSX count as used.
-    - No colour literal (hex, `rgb()`, `hsl()`, `oklch()`…) in `packages/kit-web/src` or `apps/**`.
+    - No colour literal in `packages/kit-web/src` or `apps/**`. Caught: a hex string, a hex or named colour in a
+      Tailwind arbitrary value, colour functions, a CSS colour declaration in a string, and a `style` colour that is
+      not `var(--bh-…)`. `href="#cafe"` passes.
   - Type check: `tsconfig.test.json` lets a workspace's Node tests use Node types without giving them to its browser
     code.
   - Dependencies:
@@ -186,8 +218,9 @@ docs/14 has no task for several docs/11 §11 items (2, 3, 4, 6, 12, 13).
   with Yahya's agreement (prompt 03 is the natural place).
 
 **Design system (prompt 02)**: Yahya decides; the design system file is docs/07.
-- docs/07 has no dark value for `--bh-brand-ink`, `--bh-ok-soft`, `--bh-warn-soft`, `--bh-danger-soft`. Until it
-  does, dark mode points them at existing tokens (`--bh-brand`, `--bh-surface-2`).
+- docs/07 has no dark value for `--bh-brand-ink`, `--bh-mid`, `--bh-ok-soft`, `--bh-warn-soft`, `--bh-danger-soft`.
+  Until it does, dark mode points them at existing tokens: `--bh-brand`, `--bh-text-3` (so a disabled border is quieter
+  than the light grey) and `--bh-surface-2`. `--bh-accent` keeps its light value.
   - As a result, a pressed primary button in dark mode shows only the 1 px press, not a darker colour.
   - Light values would have put black text on navy and pastel behind light text.
 - docs/07 colour pairs that fail as body text (D16 says "contrast-checked"): grey hints on panels (`--bh-text-3` on
@@ -199,6 +232,12 @@ docs/14 has no task for several docs/11 §11 items (2, 3, 4, 6, 12, 13).
 - The BrandHUB two-shape mark (docs/07 §1, `viewBox 0 0 44 44`) is not in the pack. The style guide shows only the
   wordmark; the favicon and app icons need the SVG.
 - docs/07 §6 "cleaning = muted" has no token. Prompt 28 needs one.
+- docs/07 §3 asks for tabular figures on amounts, but the bundled DM Serif Display and DM Sans have no `tnum`
+  feature. At 40 px, "1111" is 56 px wide and "0000" is 80 px, with or without the setting; only DM Mono is tabular.
+  Amount columns are right-aligned, so totals still line up on their last digit. Options:
+  - keep DM Serif Display as it is;
+  - set table figures in DM Mono;
+  - look for a DM Serif Display build that has `tnum` (not checked yet).
 - Arabic strings outside `term.*` in `packages/kit-web/src/i18n/ar.json` were written in Modern Standard Arabic for
   the interface and need a native reader's review. The `term.*` entries come from the glossary.
 - No settings field holds the per-user digits option (D11). `setDigits` exists; prompt 05 (staff) should store it

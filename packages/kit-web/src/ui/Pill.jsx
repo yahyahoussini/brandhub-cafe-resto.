@@ -27,8 +27,8 @@ const TONES = {
 export function Pill({ tone = "neutral", icon, flipIcon = false, class: className, children }) {
   const t = TONES[tone];
   return (
-    <span class={cx("inline-flex items-center gap-1.5 rounded-sm border px-2 py-1 label", t.box, className)}>
-      {icon && <Icon icon={icon} size={20} flip={flipIcon} class={cx("size-4", t.icon)} />}
+    <span class={cx("inline-flex items-center gap-1.5 rounded-sm border-2 px-2 py-1 label", t.box, className)}>
+      {icon && <Icon icon={icon} size={20} flip={flipIcon} class={t.icon} />}
       <span>{children}</span>
     </span>
   );

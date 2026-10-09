@@ -1,13 +1,15 @@
 // @ts-check
 import { X } from "lucide-preact";
-import { useEffect, useId, useRef } from "preact/hooks";
+import { useId, useRef } from "preact/hooks";
 import { t } from "../i18n/index.js";
 import { cx } from "./cx.js";
 import { Icon } from "./Icon.jsx";
+import { useModal } from "./useModal.js";
 
 /**
- * The options sheet: a bottom sheet, the only element with a shadow (docs/07 §4–§5). Escape or the close button calls
- * `onClose`; focus moves into the sheet and comes back where it was. `inline` draws it in place (style guide).
+ * The options sheet: a bottom sheet, the only element with a shadow (docs/07 §4–§5). Escape, the backdrop or the close
+ * button calls `onClose`; focus stays inside while it is open and comes back where it was. `inline` draws it in place
+ * (style guide).
  * @param {{
  *   open: boolean,
  *   onClose: () => void,
@@ -21,20 +23,7 @@ export function Sheet({ open, onClose, title, footer, inline = false, children }
   const titleId = useId();
   const panel = useRef(/** @type {HTMLDivElement | null} */ (null));
 
-  useEffect(() => {
-    if (!open || inline) return;
-    const before = /** @type {HTMLElement | null} */ (document.activeElement);
-    panel.current?.focus();
-    /** @param {KeyboardEvent} e */
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      before?.focus();
-    };
-  }, [open, inline]);
+  useModal(panel, open && !inline, onClose);
 
   if (!open) return null;
   const sheet = (

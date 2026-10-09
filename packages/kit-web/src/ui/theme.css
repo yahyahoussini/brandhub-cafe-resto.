@@ -56,7 +56,7 @@
   --text-body: 0.9375rem;
   --text-body--line-height: 1.6;
   --text-till: 1rem;
-  --text-till--line-height: 1.5;
+  --text-till--line-height: 1.6;
   --text-tile: 1.0625rem;
   --text-tile--line-height: 1.25;
   --text-key: 1.375rem;
@@ -86,7 +86,14 @@
   --spacing-key-w: 4rem;
   --spacing-key-h: 3.5rem;
   --spacing-cell: 5.5rem;
-  --container-reading: 53.75rem;
+  /* docs/07 §4: paddings 16/24, gaps 32/48, gutters 24/40, reading column 860 px (4 px grid). */
+  --spacing-pad: var(--bh-pad);
+  --spacing-pad-lg: var(--bh-pad-lg);
+  --spacing-section: var(--bh-gap);
+  --spacing-section-lg: var(--bh-gap-lg);
+  --spacing-gutter: var(--bh-gutter);
+  --spacing-gutter-lg: var(--bh-gutter-lg);
+  --container-reading: var(--bh-reading);
 
   --animate-spin: spin 1s linear infinite;
   --default-transition-duration: var(--bh-motion);

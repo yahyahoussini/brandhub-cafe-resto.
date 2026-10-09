@@ -57,15 +57,33 @@ const noFloatMoney = [
   },
 ];
 
-/** Colours come from the tokens of docs/07 only (prompt 02): no hex, rgb(), hsl() or oklch() literal in UI code. */
+/**
+ * Colours come from the tokens of docs/07 only (prompt 02). Flags, in UI code:
+ * - a whole string that is a hex colour ("#1a1bbf"), a hex or named colour in a Tailwind arbitrary value
+ *   (`bg-[#fff]`, `text-[red]`, `[color:white]`), and colour functions (`rgb(`, `hsl(`, `oklch(`, `color-mix(`…);
+ * - a CSS declaration in a string that sets a colour to anything but a token (`"color: red"`, `background:#fff`);
+ * - a JSX style object colour that is not `var(--bh-…)`.
+ * `href="#cafe"` or `"#add"` inside a longer string is not a colour.
+ */
+const NAMED =
+  "white|black|red|green|blue|yellow|orange|purple|pink|gr[ae]y|silver|navy|teal|maroon|olive|lime|aqua|fuchsia|transparent";
+const COLOUR_TEXT = [
+  "^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$",
+  `\\[(?:[a-z-]+:)?(?:#[0-9a-fA-F]{3,8}|(?:${NAMED}))\\]`,
+  "\\b(?:rgba?|hsla?|oklch|oklab|hwb|lab|lch|color-mix|color)\\(",
+  "\\b(?:color|background(?:-color)?|border(?:-[a-z]+)?-color|fill|stroke|outline-color)\\s*:\\s*(?!var\\(|inherit|currentColor)[#a-z]",
+].join("|");
+const COLOUR_MESSAGE = "No colour literal in UI code: use a token class (bg-brand, text-text-2) from docs/07.";
 const noColourLiteral = [
   {
-    selector: "Literal[value=/#[0-9a-fA-F]{3,8}\\b|\\b(rgba?|hsla?|oklch|oklab|hwb|lab|lch)\\(/]",
-    message: "No colour literal in UI code: use a token class (bg-brand, text-text-2) from docs/07.",
+    selector: `Literal[value=/${COLOUR_TEXT}/]:not(JSXAttribute[name.name=/^(href|id|for|htmlFor|name)$/] > Literal)`,
+    message: COLOUR_MESSAGE,
   },
+  { selector: `TemplateElement[value.raw=/${COLOUR_TEXT}/]`, message: COLOUR_MESSAGE },
   {
-    selector: "TemplateElement[value.raw=/#[0-9a-fA-F]{3,8}\\b|\\b(rgba?|hsla?|oklch|oklab|hwb|lab|lch)\\(/]",
-    message: "No colour literal in UI code: use a token class (bg-brand, text-text-2) from docs/07.",
+    selector:
+      "Property[key.name=/^(color|background|backgroundColor|border(Inline|Block)?(Start|End)?Color|fill|stroke|outlineColor)$/] > Literal.value:not([value=/^var\\(--bh-/])",
+    message: COLOUR_MESSAGE,
   },
 ];
 

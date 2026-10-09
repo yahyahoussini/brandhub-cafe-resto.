@@ -133,7 +133,11 @@ export function formatNumber(n) {
  * @param {Locale} [l]
  */
 export function formatAmount(centimes, l = locale.value) {
-  return localizeDigits(kitFormatAmount(centimes, l));
+  let s = kitFormatAmount(centimes, l);
+  // Arabic-Indic digits take their own separators (CLDR "arab": ٫ decimal, ٬ group), not a Latin comma and a space.
+  // The kit groups thousands with a narrow no-break space (U+202F).
+  if (digits.value === "arab") s = s.replace(/(\d),(\d)/g, "$1٫$2").replace(/(\d)[\u202f ](?=\d{3})/g, "$1٬");
+  return localizeDigits(s);
 }
 
 /** @type {Map<Locale, Intl.PluralRules>} */
@@ -160,13 +164,15 @@ export function pluralCategory(count, l = locale.value) {
  */
 export function t(key, params = {}) {
   const l = locale.value;
-  const msg = catalog[l].get(key) ?? catalog.fr.get(key);
+  // A message missing in Arabic falls back to French, and then takes the French plural rules too.
+  const source = catalog[l].has(key) ? l : DEFAULT_LOCALE;
+  const msg = catalog[source].get(key);
   if (msg === undefined) return key;
   let text;
   if (typeof msg === "string") text = msg;
   else {
     const count = Number(params.count ?? 0);
-    text = msg[pluralCategory(count, l)] ?? msg.other;
+    text = msg[pluralCategory(count, source)] ?? msg.other;
   }
   return text.replace(/\{(\w+)\}/g, (whole, name) => {
     const v = params[name];

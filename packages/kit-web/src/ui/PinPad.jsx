@@ -48,7 +48,7 @@ export function PinPad({
   }
 
   return (
-    <div class={cx("flex w-max flex-col items-center gap-4", className)}>
+    <div class={cx("flex max-w-full flex-col items-center gap-4", className)}>
       <p class="label text-text-2">{label ?? t("pin.label")}</p>
       <div
         role="status"
@@ -69,7 +69,7 @@ export function PinPad({
         ))}
       </div>
       {error && (
-        <p role="alert" class="flex items-center gap-2 text-body text-danger">
+        <p role="alert" class="flex items-center gap-2 text-center text-body text-danger">
           <Icon icon={TriangleAlert} />
           {error}
         </p>

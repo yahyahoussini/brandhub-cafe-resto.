@@ -1,14 +1,14 @@
 // @ts-check
+import { LoaderCircle } from "lucide-preact";
+import { t } from "../i18n/index.js";
 import { cx } from "./cx.js";
+import { Icon } from "./Icon.jsx";
 
 /**
+ * A column shows a field of the row (`key` must then be one of its fields) or what `render` returns.
  * @template Row
- * @typedef {{
- *   key: string,
- *   label: string,
- *   align?: "start" | "end",
- *   render?: (row: Row) => import("preact").ComponentChildren,
- * }} Column
+ * @typedef {{ key: Extract<keyof Row, string>, label: string, align?: "start" | "end", render?: undefined }
+ *   | { key: string, label: string, align?: "start" | "end", render: (row: Row) => import("preact").ComponentChildren }} Column
  */
 
 /**
@@ -21,10 +21,12 @@ import { cx } from "./cx.js";
  *   rowKey: (row: Row) => string,
  *   caption?: string,
  *   empty?: import("preact").ComponentChildren,
+ *   loading?: boolean,
  *   class?: string,
- * }} props `empty` is shown instead of the body when there are no rows (an EmptyState).
+ * }} props `empty` is shown instead of the body when there are no rows (an EmptyState); `loading` shows a loading row
+ *   while the data comes.
  */
-export function Table({ columns, rows, rowKey, caption, empty, class: className }) {
+export function Table({ columns, rows, rowKey, caption, empty, loading = false, class: className }) {
   return (
     <div class={cx("w-full overflow-x-auto border-2 border-line", className)}>
       <table class="w-full border-collapse text-body">
@@ -45,8 +47,17 @@ export function Table({ columns, rows, rowKey, caption, empty, class: className 
             ))}
           </tr>
         </thead>
-        <tbody>
-          {rows.length === 0 ? (
+        <tbody aria-busy={loading || undefined}>
+          {loading ? (
+            <tr>
+              <td colSpan={columns.length} class="px-4 py-6 text-text-2">
+                <span class="inline-flex items-center gap-2">
+                  <Icon icon={LoaderCircle} class="animate-spin" />
+                  {t("state.loading")}
+                </span>
+              </td>
+            </tr>
+          ) : rows.length === 0 ? (
             <tr>
               <td colSpan={columns.length}>{empty}</td>
             </tr>

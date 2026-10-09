@@ -52,11 +52,32 @@ export function demoProducts(product) {
   };
 }
 
-/** Banks counted at 15:00 on the café acceptance day (docs/01 §6): Sara −5,00, Ali 0,00. */
+/**
+ * Banks counted at 15:00 on the café acceptance day (docs/01 §6): Sara −5,00, Ali 0,00. The state follows docs/07 §6
+ * (balanced = success, gap within the threshold = warning, above = danger) with the default threshold of docs/03 §8
+ * (20,00 DH); prompt 03's report computes it for real.
+ */
 export const DEMO_BANKS = [
-  { id: "sara", staffKey: "styleguide.staff_sara", expected: 52500, counted: 52000, gap: -500 },
-  { id: "ali", staffKey: "styleguide.staff_ali", expected: 3000, counted: 3000, gap: 0 },
+  {
+    id: "sara",
+    staffKey: "styleguide.staff_sara",
+    expected: 52500,
+    counted: 52000,
+    gap: -500,
+    state: /** @type {const} */ ("warn"),
+  },
+  {
+    id: "ali",
+    staffKey: "styleguide.staff_ali",
+    expected: 3000,
+    counted: 3000,
+    gap: 0,
+    state: /** @type {const} */ ("ok"),
+  },
 ];
+
+/** Where the demo prices of each product come from. */
+export const DEMO_PRICE_SOURCE = { cafe: "§6", resto: "§7" };
 
 /** Day revenue of docs/01 §6 (106,00 TTC) and its first receipt number. */
 export const DEMO_REVENUE = 10600;

@@ -7,16 +7,18 @@ import { Pill } from "./Pill.jsx";
 /**
  * A product tile on the till and the waiter phone: at least 96 × 96 px (D12), name and price; selected = brand-soft
  * background and a 3 px border on the start side; out of stock shows the "Rupture" pill and cannot be tapped
- * (docs/07 §5). A product without a price (template not filled in yet) says so.
+ * (docs/07 §5). A product without a price (template not filled in yet) says so. Selected and pressed tiles keep the
+ * line colour on three sides: the brand colour is the start-side bar only.
  * @param {{
  *   name: string,
  *   priceCentimes: number | null,
  *   selected?: boolean,
  *   outOfStock?: boolean,
  *   disabled?: boolean,
+ *   state?: "pressed",
  *   onClick?: (e: MouseEvent) => void,
  *   class?: string,
- * }} props
+ * }} props `state="pressed"` shows the pressed look (style guide).
  */
 export function Tile({
   name,
@@ -24,6 +26,7 @@ export function Tile({
   selected = false,
   outOfStock = false,
   disabled = false,
+  state,
   onClick,
   class: className,
 }) {
@@ -33,17 +36,18 @@ export function Tile({
       type="button"
       aria-pressed={selected}
       aria-disabled={inactive || undefined}
+      data-state={state}
       onClick={inactive ? undefined : onClick}
       class={cx(
-        "flex min-h-tile min-w-tile flex-col items-start justify-between gap-2 rounded-sm border-2 p-3 text-start",
-        "transition-colors duration-(--bh-motion-fast) active:translate-y-px",
-        selected ? "border-brand border-s-[3px] bg-brand-soft" : "border-line bg-surface-2",
-        inactive && "cursor-not-allowed active:translate-y-0",
-        outOfStock && "bg-surface",
+        "flex min-h-tile min-w-tile flex-col items-start justify-between gap-2 rounded-sm border-2 border-line p-3 text-start",
+        "transition-colors duration-(--bh-motion-fast)",
+        outOfStock ? "bg-surface" : selected ? "border-s-[3px] border-s-brand bg-brand-soft" : "bg-surface-2",
+        inactive ? "cursor-not-allowed" : "active:translate-y-px data-[state=pressed]:translate-y-px",
         className,
       )}
     >
-      <span class={cx("line-clamp-2 text-tile font-medium", inactive ? "text-text-2" : "text-text")}>{name}</span>
+      {/* The whole name, never clipped: "Thé à la menthe (verre)" and "(théière)" are two products. */}
+      <span class={cx("text-tile font-medium break-words", inactive ? "text-text-2" : "text-text")}>{name}</span>
       <span class="flex w-full flex-wrap items-end justify-between gap-1">
         {priceCentimes === null ? (
           <span class="text-body text-text-2">{t("tile.no_price")}</span>

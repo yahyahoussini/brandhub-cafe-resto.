@@ -108,10 +108,10 @@
   },
   "empty": {
     "sales_today": "لا توجد مبيعات اليوم",
-    "sales_today_hint": "تظهر تذاكر اليوم هنا بعد أول عملية بيع."
+    "sales_today_hint": "تظهر وصولات اليوم هنا بعد أول عملية بيع."
   },
   "error": {
-    "printer_offline": "الطابعة غير متصلة — التذكرة في الانتظار.",
+    "printer_offline": "الطابعة غير متصلة — الوصل في الانتظار.",
     "printer_offline_action": "تحقق من الورق."
   },
   "styleguide": {
@@ -126,7 +126,7 @@
     "digits_arab": "هندية",
     "lang_fr": "Français",
     "lang_ar": "العربية",
-    "demo_prices": "أسعار للعرض من docs/01 §6، وليست توصية.",
+    "demo_prices": "أسعار للعرض من docs/01 {section}، وليست توصية.",
     "sections": {
       "colours": "الألوان",
       "type": "الخطوط",
@@ -155,12 +155,13 @@
       "offline": "بدون اتصال",
       "success": "نجاح",
       "selected": "محدد",
-      "office": "المكتب (40 px)"
+      "office": "المكتب (40 px)",
+      "out_of_stock": "نفد"
     },
     "type_samples": {
       "display": "تقرير المساء",
       "title": "إغلاق الصندوق",
-      "body": "التذكرة تنتظر الطابعة؛ تحقق من الورق.",
+      "body": "الوصل ينتظر الطابعة؛ تحقق من الورق.",
       "label": "الفترة الصباحية"
     },
     "kitchen": {

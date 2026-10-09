@@ -12,7 +12,8 @@ const VARIANTS = {
 
 const SIZES = {
   staff: "min-h-btn px-6 text-till",
-  office: "min-h-btn-office px-4 text-body",
+  // 16 px labels in the back office too: docs/07 §2 forbids blue text below 16 px on grey (secondary on a dark card).
+  office: "min-h-btn-office px-4 text-till",
 };
 
 /**
@@ -55,7 +56,8 @@ export function Button({
       aria-disabled={inactive || undefined}
       aria-busy={loading || undefined}
       data-state={state}
-      onClick={inactive ? undefined : onClick}
+      // A loading submit button stays focusable but must not submit twice (a second payment); cancel the click.
+      onClick={inactive ? (e) => e.preventDefault() : onClick}
       class={cx(
         "inline-flex items-center justify-center gap-2 rounded-sm border-2 font-medium select-none",
         "transition-colors duration-(--bh-motion-fast) active:translate-y-px data-[state=pressed]:translate-y-px",

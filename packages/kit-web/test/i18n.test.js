@@ -47,9 +47,18 @@ test("amounts come from the kit; Arabic-Indic digits are a per-user option (D11)
   setLocale("ar");
   assert.equal(formatAmount(10600), "106,00 درهم");
   setDigits("arab");
-  assert.equal(formatAmount(10600), "١٠٦,٠٠ درهم");
+  assert.equal(formatAmount(10600), "١٠٦٫٠٠ درهم");
+  assert.equal(formatAmount(125050), "١٬٢٥٠٫٥٠ درهم");
+  assert.equal(formatAmount(-500), "−٥٫٠٠ درهم");
   assert.equal(t("sync.pending", { count: 3 }), "في الانتظار: ٣");
   assert.equal(localizeDigits("C1-000001", "latn"), "C1-000001");
+});
+
+test("a French fallback keeps the French plural rule", () => {
+  addMessages("fr", { probe: { digits: { one: "{count} chiffre saisi", other: "{count} chiffres saisis" } } });
+  setLocale("ar");
+  assert.equal(t("probe.digits", { count: 0 }), "0 chiffre saisi");
+  assert.equal(t("probe.digits", { count: 3 }), "3 chiffres saisis");
 });
 
 test("unknown keys fall back to French, then to the key", () => {

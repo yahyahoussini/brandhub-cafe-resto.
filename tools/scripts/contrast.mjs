@@ -8,23 +8,83 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ROOT } from "./workspaces.mjs";
 
-const css = readFileSync(join(ROOT, "packages/kit-web/src/ui/tokens.css"), "utf8");
+const css = readFileSync(join(ROOT, "packages/kit-web/src/ui/tokens.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 
 /**
- * Custom properties of the first block whose selector list matches.
- * @param {RegExp} selector
+ * Every rule of the file in source order, with the @media it sits in (one level, as tokens.css uses).
+ * @returns {{ media: string | null, selectors: string[], vars: Record<string, string> }[]}
  */
-function block(selector) {
-  const m = css.match(new RegExp(`${selector.source}\\s*\\{([^}]*)\\}`));
-  if (!m) throw new Error(`no block ${selector}`);
-  /** @type {Record<string, string>} */
-  const vars = {};
-  for (const [, name, value] of m[1].matchAll(/(--bh-[\w-]+)\s*:\s*([^;]+);/g)) vars[name] = value.trim();
-  return vars;
+function rules() {
+  const out = [];
+  let i = 0;
+  /** @type {string | null} */
+  let media = null;
+  while (i < css.length) {
+    const open = css.indexOf("{", i);
+    const close = css.indexOf("}", i);
+    if (close !== -1 && (open === -1 || close < open)) {
+      media = null; // end of an @media block
+      i = close + 1;
+      continue;
+    }
+    if (open === -1) break;
+    const prelude = css.slice(i, open).trim();
+    if (prelude.startsWith("@media")) {
+      media = prelude;
+      i = open + 1;
+      continue;
+    }
+    const end = css.indexOf("}", open);
+    /** @type {Record<string, string>} */
+    const vars = {};
+    for (const [, name, value] of css.slice(open + 1, end).matchAll(/(--bh-[\w-]+)\s*:\s*([^;]+);/g)) {
+      vars[name] = value.trim();
+    }
+    out.push({ media, selectors: prelude.split(",").map((x) => x.trim()), vars });
+    i = end + 1;
+  }
+  return out;
 }
 
-const light = block(/:root/);
-const dark = { ...light, ...block(/:root\[data-theme="dark"\],\s*\[data-theme="dark"\]/) };
+const COLOUR = /^(#[0-9a-f]{3,8}|var\(--bh-[\w-]+\))$/i;
+const all = rules();
+const isLight = (/** @type {(typeof all)[number]} */ r) =>
+  r.media === null && r.selectors.includes(":root") && r.selectors.includes('[data-theme="light"]');
+const isDarkMedia = (/** @type {(typeof all)[number]} */ r) =>
+  !!r.media?.includes("prefers-color-scheme: dark") && r.selectors.includes(':root:not([data-theme="light"])');
+const isDarkAttr = (/** @type {(typeof all)[number]} */ r) =>
+  r.media === null && r.selectors.includes('[data-theme="dark"]');
+
+/** @type {string[]} */
+const structure = [];
+/** @param {(r: (typeof all)[number]) => boolean} pick */
+function merged(pick) {
+  const found = all.filter(pick);
+  /** @type {Record<string, string>} */
+  const vars = {};
+  for (const r of found) Object.assign(vars, r.vars);
+  return { vars, count: found.length };
+}
+const lightBlock = merged(isLight);
+const darkMediaBlock = merged(isDarkMedia);
+const darkAttrBlock = merged(isDarkAttr);
+for (const [name, b] of /** @type {const} */ ([
+  ["light (:root, [data-theme=light])", lightBlock],
+  ["dark (prefers-color-scheme)", darkMediaBlock],
+  ["dark ([data-theme=dark])", darkAttrBlock],
+])) {
+  if (b.count !== 1) structure.push(`expected exactly one ${name} block, found ${b.count}`);
+}
+// A colour declared anywhere else would escape this check (an override after the light block, a third theme).
+for (const r of all) {
+  if (isLight(r) || isDarkMedia(r) || isDarkAttr(r)) continue;
+  for (const [name, value] of Object.entries(r.vars)) {
+    if (COLOUR.test(value))
+      structure.push(`${name} is a colour declared outside the three colour blocks (${r.selectors.join(", ")})`);
+  }
+}
+const light = lightBlock.vars;
+const dark = { ...light, ...darkAttrBlock.vars };
 
 /**
  * @param {Record<string, string>} theme
@@ -132,12 +192,15 @@ print("Pairs used by the components", rows);
 print("docs/07 pairs the components avoid (information)", avoided);
 
 const failures = rows.filter((r) => r.result === "FAIL").length;
-const darkMedia = block(/:root:not\(\[data-theme="light"\]\)/);
-const darkAttr = block(/:root\[data-theme="dark"\],\s*\[data-theme="dark"\]/);
-const sameDark = JSON.stringify(darkMedia) === JSON.stringify(darkAttr);
+const sorted = (/** @type {Record<string, string>} */ o) => JSON.stringify(Object.entries(o).sort());
+const sameDark = sorted(darkMediaBlock.vars) === sorted(darkAttrBlock.vars);
+const missingDark = Object.keys(light).filter((k) => COLOUR.test(light[k]) && !(k in darkAttrBlock.vars));
+if (missingDark.length)
+  structure.push(`dark blocks do not set ${missingDark.join(", ")} (write the light value or an alias explicitly)`);
 console.log(
   `\nused: ${rows.length - failures} pass, ${failures} fail (text ≥ 4.5:1; icons, borders, large text ≥ 3:1)`,
 );
 console.log(`avoided: ${avoided.filter((r) => r.result === "FAIL").length} of ${avoided.length} fail as body text`);
 console.log(`dark blocks identical: ${sameDark ? "yes" : "NO"}`);
-process.exit(failures || !sameDark ? 1 : 0);
+for (const p of structure) console.log(`structure: ${p}`);
+process.exit(failures || !sameDark || structure.length ? 1 : 0);

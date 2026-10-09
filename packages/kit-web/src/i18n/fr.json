@@ -114,7 +114,7 @@
     "digits_arab": "Arabes-indiens",
     "lang_fr": "Français",
     "lang_ar": "العربية",
-    "demo_prices": "Prix de démonstration de docs/01 §6, pas une recommandation.",
+    "demo_prices": "Prix de démonstration de docs/01 {section}, pas une recommandation.",
     "sections": {
       "colours": "Couleurs",
       "type": "Typographie",
@@ -143,7 +143,8 @@
       "offline": "Hors ligne",
       "success": "Succès",
       "selected": "Sélectionné",
-      "office": "Bureau (40 px)"
+      "office": "Bureau (40 px)",
+      "out_of_stock": "Rupture"
     },
     "type_samples": {
       "display": "Rapport du soir",

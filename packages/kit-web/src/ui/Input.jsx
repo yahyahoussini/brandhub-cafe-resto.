@@ -39,6 +39,8 @@ export function Input({
   class: className,
 }) {
   const id = useId();
+  // Phone numbers are always left to right (docs/07 §7).
+  const isLtr = ltr || type === "tel";
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   return (
@@ -51,7 +53,7 @@ export function Input({
         type={type}
         value={value}
         inputMode={inputMode}
-        dir={ltr ? "ltr" : undefined}
+        dir={isLtr ? "ltr" : undefined}
         disabled={disabled}
         required={required}
         autoComplete={autoComplete}
@@ -62,7 +64,7 @@ export function Input({
           "w-full rounded-sm border-2 bg-surface-2 px-3 text-text outline-none transition-colors duration-(--bh-motion-fast)",
           "focus:border-brand disabled:cursor-not-allowed disabled:border-mid disabled:text-text-3",
           size === "staff" ? "h-input text-till" : "h-input-office text-body",
-          ltr && "text-start",
+          isLtr && "text-start",
           error ? "border-danger" : "border-line",
         )}
       />

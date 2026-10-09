@@ -22,7 +22,12 @@
     "i18n": "node tools/scripts/i18n.mjs",
     "budgets": "node tools/scripts/budgets.mjs",
     "e2e": "playwright test --pass-with-no-tests",
-    "gate": "npm run typecheck && npm run lint && npm run i18n && npm test && npm run budgets"
+    "gate": "npm run typecheck && npm run lint && npm run i18n && npm test && npm run budgets",
+    "contrast": "node tools/scripts/contrast.mjs",
+    "fonts": "node tools/scripts/fonts.mjs",
+    "styleguide:cafe": "npm run styleguide -w @brandhub/cafe-web",
+    "styleguide:resto": "npm run styleguide -w @brandhub/resto-web",
+    "size:ui": "node tools/scripts/ui-size.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

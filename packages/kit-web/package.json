@@ -3,5 +3,25 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Browser side of the kit: Dexie store, sync client, printing transports, i18n runtime, UI components (prompts 02, 05, 06, 09)."
+  "description": "Browser side of the kit: Dexie store, sync client, printing transports, i18n runtime, UI components (prompts 02, 05, 06, 09).",
+  "dependencies": {
+    "@brandhub/kit": "0.1.0",
+    "@preact/signals": "^2.11.3",
+    "lucide-preact": "^1.54.0",
+    "preact": "^10.29.8"
+  },
+  "exports": {
+    "./ui": "./src/ui/index.js",
+    "./ui/theme.css": "./src/ui/theme.css",
+    "./ui/tokens.css": "./src/ui/tokens.css",
+    "./i18n": "./src/i18n/index.js",
+    "./styleguide": "./src/styleguide/index.js"
+  },
+  "devDependencies": {
+    "@fontsource/dm-mono": "^5.3.0",
+    "@fontsource/dm-sans": "^5.3.0",
+    "@fontsource/dm-serif-display": "^5.3.0",
+    "@fontsource/ibm-plex-sans-arabic": "^5.3.0",
+    "@fontsource/noto-kufi-arabic": "^5.3.0"
+  }
 }

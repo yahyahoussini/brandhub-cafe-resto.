@@ -1,0 +1,134 @@
+/*
+ * BrandHUB Product Design System v1 — tokens (docs/07 §2–§4, D16). The only source of colours and sizes.
+ * Light by default; dark from `prefers-color-scheme` unless the page sets `data-theme="light"`, or forced with
+ * `data-theme="dark"` (kitchen screens). Where docs/07 gives no dark value ("—"), the light value applies.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* §2 Colour */
+  --bh-brand: #1a1bbf;
+  --bh-brand-ink: #14158f;
+  --bh-brand-soft: #e8e8fa;
+  --bh-accent: #3a6bff;
+  --bh-black: #0a0a0a;
+  --bh-bg: #ffffff;
+  --bh-surface: #f4f4f4;
+  --bh-surface-2: #ffffff;
+  --bh-line: #e6e6e6;
+  --bh-mid: #bfbfbf;
+  --bh-text: #1a1a1a;
+  --bh-text-2: #444444;
+  --bh-text-3: #767676;
+  --bh-ok: #1f8a4c;
+  --bh-ok-soft: #e4f3ea;
+  --bh-warn: #b86e00;
+  --bh-warn-soft: #fbefd9;
+  --bh-danger: #c8102e;
+  --bh-danger-soft: #fbe3e6;
+
+  /* Text on a brand fill: white on light brand, black on dark brand (both are page backgrounds of docs/07). */
+  --bh-on-brand: var(--bh-bg);
+  /* Text on the black toast. */
+  --bh-on-black: var(--bh-surface-2);
+
+  /* §3 Type */
+  --bh-font-ui: "DM Sans", system-ui, sans-serif;
+  --bh-font-display: "DM Serif Display", Georgia, serif;
+  --bh-font-amount: "DM Serif Display", Georgia, serif;
+  --bh-font-mono: "DM Mono", ui-monospace, monospace;
+  --bh-label-tracking: 0.2em;
+  --bh-label-weight: 500;
+
+  /* §4 Shape, spacing, motion */
+  --bh-radius: 2px;
+  --bh-radius-lg: 4px;
+  --bh-seam: 2px;
+  --bh-motion-fast: 120ms;
+  --bh-motion: 160ms;
+  --bh-toast-ms: 4000;
+}
+
+/* Arabic: IBM Plex Sans Arabic for the interface, Noto Kufi Arabic 700 for display, never DM Serif/DM Sans for Arabic
+   text. Amounts keep DM Serif Display (Western digits, left to right). Body one step larger; labels use weight, not
+   letter-spacing. */
+html[lang="ar"] {
+  font-size: 106.66%;
+  --bh-font-ui: "IBM Plex Sans Arabic", "DM Sans", system-ui, sans-serif;
+  --bh-font-display: "Noto Kufi Arabic", "IBM Plex Sans Arabic", sans-serif;
+  /* Digits stay in DM Serif Display; the currency word (درهم) falls through to IBM Plex Sans Arabic. */
+  --bh-font-amount: "DM Serif Display", "IBM Plex Sans Arabic", serif;
+  --bh-label-tracking: 0;
+  --bh-label-weight: 700;
+}
+
+/* Dark: the same block twice, for the system setting and for an explicit data-theme="dark" (npm run contrast checks
+   that both stay identical). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bh-brand: #6c86ff;
+    --bh-brand-soft: #171a3a;
+    --bh-black: #0a0a0a;
+    --bh-bg: #0a0a0a;
+    --bh-surface: #141414;
+    --bh-surface-2: #1e1e1e;
+    --bh-line: #2a2a2a;
+    --bh-text: #f2f2f2;
+    --bh-text-2: #c4c4c4;
+    --bh-text-3: #8a8a8a;
+    --bh-ok: #4cc479;
+    --bh-warn: #f0a63a;
+    --bh-danger: #ff5a6e;
+    /* docs/07 gives no dark value for these; they reuse docs/07 tokens until the design system sets them
+       (docs/STATUS.md, open items). Light values would put black on navy and pastel behind light text. */
+    --bh-brand-ink: var(--bh-brand);
+    --bh-ok-soft: var(--bh-surface-2);
+    --bh-warn-soft: var(--bh-surface-2);
+    --bh-danger-soft: var(--bh-surface-2);
+    /* Aliases are re-declared so a dark subtree (kitchen screen) resolves them against its own values. */
+    --bh-on-brand: var(--bh-bg);
+    --bh-on-black: var(--bh-text);
+  }
+}
+
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bh-brand: #6c86ff;
+  --bh-brand-soft: #171a3a;
+  --bh-black: #0a0a0a;
+  --bh-bg: #0a0a0a;
+  --bh-surface: #141414;
+  --bh-surface-2: #1e1e1e;
+  --bh-line: #2a2a2a;
+  --bh-text: #f2f2f2;
+  --bh-text-2: #c4c4c4;
+  --bh-text-3: #8a8a8a;
+  --bh-ok: #4cc479;
+  --bh-warn: #f0a63a;
+  --bh-danger: #ff5a6e;
+  /* docs/07 gives no dark value for these; they reuse docs/07 tokens until the design system sets them
+     (docs/STATUS.md, open items). Light values would put black on navy and pastel behind light text. */
+  --bh-brand-ink: var(--bh-brand);
+  --bh-ok-soft: var(--bh-surface-2);
+  --bh-warn-soft: var(--bh-surface-2);
+  --bh-danger-soft: var(--bh-surface-2);
+  /* Aliases are re-declared so a dark subtree (kitchen screen) resolves them against its own values. */
+  --bh-on-brand: var(--bh-bg);
+  --bh-on-black: var(--bh-text);
+}
+
+/* A light subtree inside a dark page re-declares the aliases too. */
+[data-theme="light"] {
+  --bh-on-brand: var(--bh-bg);
+  --bh-on-black: var(--bh-surface-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --bh-motion-fast: 0ms;
+    --bh-motion: 0ms;
+  }
+}

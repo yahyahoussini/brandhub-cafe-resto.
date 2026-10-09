@@ -16,6 +16,7 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
 |---|---|---|---|---|
 | 00 | Orientation | done | 4 Oct 2026 | Node v22.22.0, `npm test` 75/75. 15 contradictions or gaps listed below (not applied). Gate 1 not run, pilot 1 not chosen. |
 | 01 | Repository scaffold | done | 4 Oct 2026 | Node v22.22.0, npm 10.9.4, TypeScript 5.9.3, ESLint 9.39.5, Prettier 3.9.9, Playwright 1.56.1. `npm ci && npm run gate` passes, 94 tests (kit 75 + `bh/logical-css` 19). Details below. |
+| 02 | Design system, fonts, UI parts, i18n | done | 9 Oct 2026 | `npm run gate` passes, 107 tests. `npm run contrast`: 52/52 used pairs pass. 16 Playwright runs pass, no external host. UI kit 9.9 KB gzip (21.2 KB with Preact, signals, Lucide), CSS 5.0 KB, fonts 208 KB. Details below. |
 
 ## Current state
 - Kit: 75 unit tests passing (money, ids, order with moves and customers, bank with the bank guard, receipts, escpos,
@@ -57,6 +58,60 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
   - `.gitignore` keeps every local secret file out (`.dev.vars*`, `.env*`, except `*.example`).
   - Before commit, three review agents checked the scaffold and a second pass tried to disprove each finding. The confirmed
     findings are fixed in `fix(tooling): close lint and type-check gaps found in review`.
+- Design system and UI kit (prompt 02), `packages/kit-web`:
+  - `src/ui/tokens.css`: every value of docs/07 §2–§4 as `--bh-*` custom properties.
+    - Light by default; dark from `prefers-color-scheme`, or forced with `data-theme="dark"`. The two dark blocks are
+      identical (`npm run contrast` checks this).
+    - Arabic (`html[lang="ar"]`): IBM Plex Sans Arabic for the interface, Noto Kufi Arabic for display, 106.66 % size,
+      labels in weight 700 instead of letter-spacing.
+  - `src/ui/theme.css`: Tailwind 4 `@theme inline` mapping the tokens.
+    - Tailwind's default colours, radii, shadows, fonts and text sizes are removed, so only docs/07 tokens exist.
+    - Utilities `label`, `amount` (DM Serif Display, tabular figures, `dir=ltr`, no wrap) and `seam`.
+    - Each app's stylesheet is `@import "tailwindcss"; @import "@brandhub/kit-web/ui/theme.css";`.
+  - Fonts: `npm run fonts` (`tools/scripts/fonts.mjs`) copies the woff2 subsets from `@fontsource` into
+    `packages/kit-web/fonts/` and their OFL texts into `fonts/LICENSES/`, then writes `src/ui/fonts.css`.
+    - Faces: DM Sans 400/500/700, DM Serif Display 400, DM Mono 400 (Latin subset); IBM Plex Sans Arabic 400/700,
+      Noto Kufi Arabic 700 (Arabic subset). 8 files, 208 KB.
+    - A browser downloads a face only when text needs it: a French screen loads the five Latin faces (80 KB).
+  - Components (`src/ui/`, Preact `.jsx`, JSDoc props): `Button`, `Tile`, `Stepper`, `Keypad`, `PinPad`, `Sheet`,
+    `Toast`, `SyncBadge`, `Input`, `Pill`, `Table`, `ApprovalDialog`, `EmptyState`, `ErrorBanner`.
+    - Helpers: `Amount`, `Icon` (Lucide, stroke 1.75, flipped in right-to-left when it points), `cx`, and the pure
+      `syncState()` (D15: red after 10 minutes without contact, orange when events wait, green otherwise; tested).
+    - `ApprovalDialog` returns a reason key (`error`, `customer_left`, `comped`, `breakage`, `other`), stored as the
+      event's `reason`.
+  - i18n (`src/i18n/`): `t(key, params)` with French and Arabic CLDR plurals, `setLocale` (sets `lang` and `dir` on
+    `<html>`), `dir()`, `setDigits("latn" | "arab")`, `formatAmount` (the kit's, in the user's digits), `addMessages`
+    for each app's own strings.
+    - Locale and digits are signals, so components update when they change.
+    - `fr.json` and `ar.json` hold 127 keys; `term.*` is the glossary (fr, ar), never Darija.
+  - `npm run i18n` (in the gate) checks every `i18n/` folder of every workspace:
+    - the same keys in fr and ar, no empty string, the same `{placeholders}`;
+    - plural categories complete (fr one/other, ar all six);
+    - `term.*` equal to the glossary, and no Darija in `ar.json`;
+    - every literal `t("…")` key exists.
+  - Style guide (dev only): `npm run styleguide:cafe` / `styleguide:resto` opens `/styleguide` on the app's Vite dev
+    server (ports 5173 and 5174).
+    - Every component in every state of docs/06 §8.
+    - Switches for French/Arabic, light/dark and Western/Arabic-Indic digits; the URL keeps `?lang&theme&digits`.
+    - Demo products come from the menu templates, with the demo prices of docs/01 §6 and §7 (labelled as such).
+  - `npm run contrast`: 26 text/background pairs the components use, light and dark (52 checks, all pass), plus the
+    docs/07 pairs the components avoid. Exits 1 if a used pair fails or the dark blocks differ.
+  - `e2e/styleguide.spec.js` (16 runs: 2 apps × fr/ar × 360/1280 × light/dark) checks:
+    - `lang`, `dir` and theme;
+    - the bundled fonts load;
+    - tiles ≥ 96 × 96 and keys ≥ 64 × 56;
+    - only `localhost` is contacted (network log `test-results/styleguide/*.network.json`).
+    It saves full-page screenshots. The four café variants at 1280 px are kept in `docs/screenshots/02-styleguide/`.
+  - `npm run size:ui`: gzip size of the UI kit, the CSS and the fonts.
+  - Lint additions:
+    - `bh/jsx-uses-vars`: components used in JSX count as used.
+    - No colour literal (hex, `rgb()`, `hsl()`, `oklch()`…) in `packages/kit-web/src` or `apps/**`.
+  - Type check: `tsconfig.test.json` lets a workspace's Node tests use Node types without giving them to its browser
+    code.
+  - Dependencies:
+    - kit-web: `preact` 10.29 (Preact 11 was released on 30 Sep 2026, too new for the pilot), `@preact/signals` 2,
+      `lucide-preact`; `@fontsource/*` as dev dependencies, since the woff2 files are copied.
+    - Web apps (dev): `vite` 8, `@preact/preset-vite`, `tailwindcss` 4.3, `@tailwindcss/vite`.
 - docs/02 §2 workspace line aligned with prompt 01 (`apps/cafe/*`, `apps/resto/*`, `apps/station`, `tools`).
 - Repository: the pack is commit `5a6674a` in `yahyahoussini/brandhub-cafe-resto`. The build runs on
   `yahyahoussini/brandhub-cafe-resto.` (trailing dot), branch `claude/gallant-brown-cq49fc`. Both repositories are
@@ -129,6 +184,25 @@ docs/14 has no task for several docs/11 §11 items (2, 3, 4, 6, 12, 13).
   and 08 add them with those tools.
 - The kit tests are not type-checked (see Tooling). Adding `// @ts-check` and fixing them is a kit change; do it only
   with Yahya's agreement (prompt 03 is the natural place).
+
+**Design system (prompt 02)**: Yahya decides; the design system file is docs/07.
+- docs/07 has no dark value for `--bh-brand-ink`, `--bh-ok-soft`, `--bh-warn-soft`, `--bh-danger-soft`. Until it
+  does, dark mode points them at existing tokens (`--bh-brand`, `--bh-surface-2`).
+  - As a result, a pressed primary button in dark mode shows only the 1 px press, not a darker colour.
+  - Light values would have put black text on navy and pastel behind light text.
+- docs/07 colour pairs that fail as body text (D16 says "contrast-checked"): grey hints on panels (`--bh-text-3` on
+  `--bh-surface`, 4.13:1); success and warning colours as text on their soft fills (3.82, 3.50) and on white (4.38,
+  3.99). The components avoid them: state text is written in `--bh-text`, and the state colour goes on the icon,
+  border or bar. Darker `--bh-ok`/`--bh-warn` values would let state text be coloured.
+- docs/07 §2 says "dark brand 5.4:1": no token pair gives 5.4. Dark brand is 6.12:1 on the page, 5.69 on panels and
+  5.15 on cards.
+- The BrandHUB two-shape mark (docs/07 §1, `viewBox 0 0 44 44`) is not in the pack. The style guide shows only the
+  wordmark; the favicon and app icons need the SVG.
+- docs/07 §6 "cleaning = muted" has no token. Prompt 28 needs one.
+- Arabic strings outside `term.*` in `packages/kit-web/src/i18n/ar.json` were written in Modern Standard Arabic for
+  the interface and need a native reader's review. The `term.*` entries come from the glossary.
+- No settings field holds the per-user digits option (D11). `setDigits` exists; prompt 05 (staff) should store it
+  with the user.
 
 To confirm (from docs/11 §11, data flags and Darija drafts). Who confirms → needed by.
 

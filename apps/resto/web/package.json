@@ -3,5 +3,19 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "BrandHub Resto PWA (Preact, Vite): dining room, kitchen screens, food cost."
+  "description": "BrandHub Resto PWA (Preact, Vite): dining room, kitchen screens, food cost.",
+  "scripts": {
+    "dev": "vite --port 5174",
+    "styleguide": "vite --port 5174 --open /styleguide/"
+  },
+  "dependencies": {
+    "preact": "^10.29.8",
+    "@brandhub/kit-web": "0.0.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.4"
+  }
 }

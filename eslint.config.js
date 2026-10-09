@@ -33,6 +33,7 @@ const crossAppRules = (self, other) => {
     "no-restricted-imports": ["error", { patterns: [{ regex: appRegex(other), message }, byPathIntoPackages] }],
     "no-restricted-syntax": [
       ...noFloatMoney,
+      ...noColourLiteral,
       noDynamicImport(appRegex(other), message),
       noDynamicImport(PACKAGES_BY_PATH, byPathIntoPackages.message),
     ],
@@ -53,6 +54,18 @@ const noFloatMoney = [
   {
     selector: "CallExpression[callee.property.name='toFixed']",
     message: "No .toFixed() in apps: format amounts with @brandhub/kit/money.",
+  },
+];
+
+/** Colours come from the tokens of docs/07 only (prompt 02): no hex, rgb(), hsl() or oklch() literal in UI code. */
+const noColourLiteral = [
+  {
+    selector: "Literal[value=/#[0-9a-fA-F]{3,8}\\b|\\b(rgba?|hsla?|oklch|oklab|hwb|lab|lch)\\(/]",
+    message: "No colour literal in UI code: use a token class (bg-brand, text-text-2) from docs/07.",
+  },
+  {
+    selector: "TemplateElement[value.raw=/#[0-9a-fA-F]{3,8}\\b|\\b(rgba?|hsla?|oklch|oklab|hwb|lab|lch)\\(/]",
+    message: "No colour literal in UI code: use a token class (bg-brand, text-text-2) from docs/07.",
   },
 ];
 
@@ -84,6 +97,7 @@ export default [
     plugins: { bh },
     rules: {
       "bh/logical-css": "error",
+      "bh/jsx-uses-vars": "error",
       "no-console": "error",
       // Character classes with no-break spaces are how money and Arabic text are parsed (kit money.js, escpos.js).
       "no-irregular-whitespace": ["error", { skipRegExps: true }],
@@ -100,6 +114,10 @@ export default [
   {
     files: ["packages/kit-web/**", "apps/*/web/**"],
     languageOptions: { globals: { ...globals.browser } },
+  },
+  {
+    files: ["packages/kit-web/src/**"],
+    rules: { "no-restricted-syntax": ["error", ...noColourLiteral] },
   },
   // Workers (Cloudflare runtime: service worker scope plus its own globals).
   {

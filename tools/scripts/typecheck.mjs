@@ -2,6 +2,8 @@
 /**
  * `npm run typecheck`: `tsc --noEmit` (strict, JSDoc) on every workspace that has a tsconfig.json and source files.
  * A workspace with no source yet is listed as skipped, so it is checked as soon as a prompt adds code to it.
+ * A `tsconfig.test.json` next to it checks the workspace's Node tests (node:test) without giving its browser code
+ * the Node types.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -19,11 +21,15 @@ for (const dir of [".", ...workspaceDirs()]) {
     console.log(`typecheck ${dir}: skipped (no source yet)`);
     continue;
   }
-  const run = spawnSync(process.execPath, [tsc, "-p", join(abs, "tsconfig.json")], { stdio: "inherit" });
-  if (run.status === 0) console.log(`typecheck ${dir}: ok`);
-  else {
-    console.error(`typecheck ${dir}: failed`);
-    failed++;
+  for (const config of ["tsconfig.json", "tsconfig.test.json"]) {
+    if (!existsSync(join(abs, config))) continue;
+    const name = config === "tsconfig.json" ? dir : `${dir} (tests)`;
+    const run = spawnSync(process.execPath, [tsc, "-p", join(abs, config)], { stdio: "inherit" });
+    if (run.status === 0) console.log(`typecheck ${name}: ok`);
+    else {
+      console.error(`typecheck ${name}: failed`);
+      failed++;
+    }
   }
 }
 

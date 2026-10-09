@@ -10,6 +10,8 @@
  * bodies (`computed(() => …)`).
  */
 
+import { jsxUsesVars } from "./jsx-uses-vars.js";
+
 const PHYSICAL = [/^(scroll-)?(ml|mr|pl|pr)-/, /^(left|right)-/, /^text-(left|right)$/, /^(rounded|border)-(l|r)(-|$)/];
 
 const LOGICAL_HINT = "use ms-/me-, ps-/pe-, start-/end-, text-start/text-end, rounded-s/rounded-e, border-s/border-e";
@@ -165,4 +167,4 @@ export const logicalCss = {
   },
 };
 
-export default { rules: { "logical-css": logicalCss } };
+export default { rules: { "logical-css": logicalCss, "jsx-uses-vars": jsxUsesVars } };

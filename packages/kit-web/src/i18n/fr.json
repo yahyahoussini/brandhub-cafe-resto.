@@ -1,0 +1,173 @@
+{
+  "$comment": "Shared strings of both products (prompt 02). 'term' is seeded from data/glossary.json (fr); npm run i18n checks it stays equal.",
+  "term": {
+    "till": "Caisse",
+    "cashier": "Caissier",
+    "waiter": "Serveur",
+    "manager": "Gérant",
+    "owner": "Patron",
+    "table": "Table",
+    "room": "Salle",
+    "terrace": "Terrasse",
+    "bill": "Addition",
+    "pay": "Payer",
+    "cash": "Espèces",
+    "card": "Carte",
+    "change": "Rendu",
+    "receipt": "Ticket",
+    "void": "Annuler",
+    "discount": "Remise",
+    "hold": "En attente",
+    "send_bar": "Envoyer au bar",
+    "send_kitchen": "Envoyer en cuisine",
+    "tip": "Pourboire",
+    "tip_pool": "Borsat",
+    "credit": "Crédit (Kredi)",
+    "gap": "Écart",
+    "doses": "Doses",
+    "shift": "Service",
+    "close_till": "Fermer la caisse",
+    "clock_in": "Pointer",
+    "offline": "Hors ligne",
+    "synced": "Synchronisé",
+    "pending_sync": "En attente d'envoi",
+    "stock": "Stock",
+    "low_stock": "Stock bas",
+    "out_of_stock": "Rupture",
+    "approval": "Validation gérant",
+    "evening_report": "Rapport du soir",
+    "drawer": "Tiroir-caisse",
+    "float": "Fond de caisse",
+    "blind_count": "Comptage",
+    "reprint": "Réimprimer",
+    "take_over": "Reprendre"
+  },
+  "action": {
+    "validate": "Valider",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "retry": "Réessayer"
+  },
+  "state": {
+    "loading": "Chargement…"
+  },
+  "sync": {
+    "label": "Synchronisation",
+    "pending": {
+      "one": "{count} en attente",
+      "other": "{count} en attente"
+    },
+    "offline": {
+      "one": "Hors ligne depuis {count} min",
+      "other": "Hors ligne depuis {count} min"
+    },
+    "aria": "Synchronisation : {state}"
+  },
+  "tile": {
+    "no_price": "Prix à saisir"
+  },
+  "stepper": {
+    "decrease": "Diminuer",
+    "increase": "Augmenter"
+  },
+  "keypad": {
+    "label": "Pavé numérique",
+    "delete": "Effacer le dernier chiffre"
+  },
+  "pin": {
+    "label": "Code PIN",
+    "entered": {
+      "one": "{count} chiffre saisi sur {length}",
+      "other": "{count} chiffres saisis sur {length}"
+    }
+  },
+  "approval": {
+    "pin": "PIN du gérant",
+    "reason": "Motif",
+    "choose_reason": "Choisissez un motif, puis le gérant tape son PIN.",
+    "wrong_pin": "PIN incorrect. Réessayez.",
+    "reasons": {
+      "error": "Erreur",
+      "customer_left": "Client parti",
+      "comped": "Offert",
+      "breakage": "Casse",
+      "other": "Autre"
+    }
+  },
+  "empty": {
+    "sales_today": "Aucune vente aujourd'hui",
+    "sales_today_hint": "Les tickets du jour s'affichent ici dès la première vente."
+  },
+  "error": {
+    "printer_offline": "Imprimante hors ligne — le ticket attend.",
+    "printer_offline_action": "Vérifiez le papier."
+  },
+  "styleguide": {
+    "title": "Guide de style",
+    "dev_only": "Page de développement : elle n'existe pas dans l'application livrée.",
+    "language": "Langue",
+    "theme": "Thème",
+    "theme_light": "Clair",
+    "theme_dark": "Sombre",
+    "digits": "Chiffres",
+    "digits_latn": "Occidentaux",
+    "digits_arab": "Arabes-indiens",
+    "lang_fr": "Français",
+    "lang_ar": "العربية",
+    "demo_prices": "Prix de démonstration de docs/01 §6, pas une recommandation.",
+    "sections": {
+      "colours": "Couleurs",
+      "type": "Typographie",
+      "button": "Bouton",
+      "tile": "Tuile produit",
+      "stepper": "Compteur",
+      "keypad": "Pavé numérique",
+      "pinpad": "Code PIN",
+      "sheet": "Feuille d'options",
+      "toast": "Notification",
+      "sync": "État de synchronisation",
+      "input": "Champ de saisie",
+      "pill": "Pastille",
+      "table": "Tableau",
+      "approval": "Validation gérant",
+      "empty": "État vide",
+      "error_banner": "Bandeau d'erreur"
+    },
+    "states": {
+      "default": "Par défaut",
+      "pressed": "Appuyé",
+      "disabled": "Désactivé",
+      "loading": "Chargement",
+      "error": "Erreur",
+      "empty": "Vide",
+      "offline": "Hors ligne",
+      "success": "Succès",
+      "selected": "Sélectionné",
+      "office": "Bureau (40 px)"
+    },
+    "type_samples": {
+      "display": "Rapport du soir",
+      "title": "Fermer la caisse",
+      "body": "Le ticket attend l'imprimante ; vérifiez le papier.",
+      "label": "Service du matin"
+    },
+    "kitchen": {
+      "new": "Nouveau",
+      "preparing": "En préparation",
+      "ready": "Prêt",
+      "late": "En retard"
+    },
+    "input_label": "Montant reçu",
+    "input_hint": "En dirhams, centimes après la virgule.",
+    "input_error": "Montant invalide : tapez par exemple 50,00.",
+    "table_caption": "Comptage de fin de service",
+    "col_staff": "Personnel",
+    "col_expected": "Attendu",
+    "col_counted": "Compté",
+    "toast_printed": "Ticket imprimé",
+    "sheet_title": "Café crème",
+    "sheet_body": "Sucre, lait, taille : les options du produit s'affichent ici.",
+    "staff_sara": "Sara",
+    "staff_ali": "Ali"
+  }
+}

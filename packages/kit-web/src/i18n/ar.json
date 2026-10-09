@@ -1,0 +1,185 @@
+{
+  "$comment": "Arabic of the shared strings. 'term' is seeded from data/glossary.json (ar, never darija); npm run i18n checks it stays equal. Strings outside 'term' await a native reader's review (docs/STATUS.md).",
+  "term": {
+    "till": "الصندوق",
+    "cashier": "أمين الصندوق",
+    "waiter": "النادل",
+    "manager": "المسير",
+    "owner": "صاحب المحل",
+    "table": "الطاولة",
+    "room": "القاعة",
+    "terrace": "التراس",
+    "bill": "الحساب",
+    "pay": "أداء",
+    "cash": "نقداً",
+    "card": "بطاقة",
+    "change": "الباقي",
+    "receipt": "الوصل",
+    "void": "إلغاء",
+    "discount": "تخفيض",
+    "hold": "في الانتظار",
+    "send_bar": "أرسل إلى البار",
+    "send_kitchen": "أرسل إلى المطبخ",
+    "tip": "إكرامية",
+    "tip_pool": "البورصط",
+    "credit": "البيع بالدين",
+    "gap": "الفرق",
+    "doses": "الجرعات",
+    "shift": "الفترة",
+    "close_till": "إغلاق الصندوق",
+    "clock_in": "تسجيل الحضور",
+    "offline": "بدون اتصال",
+    "synced": "متزامن",
+    "pending_sync": "في انتظار الإرسال",
+    "stock": "المخزون",
+    "low_stock": "مخزون منخفض",
+    "out_of_stock": "نفد",
+    "approval": "موافقة المسير",
+    "evening_report": "تقرير المساء",
+    "drawer": "درج النقود",
+    "float": "رصيد البداية",
+    "blind_count": "العد",
+    "reprint": "إعادة الطبع",
+    "take_over": "استلام"
+  },
+  "action": {
+    "validate": "تأكيد",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "retry": "إعادة المحاولة"
+  },
+  "state": {
+    "loading": "جارٍ التحميل…"
+  },
+  "sync": {
+    "label": "المزامنة",
+    "pending": {
+      "zero": "في الانتظار: {count}",
+      "one": "في الانتظار: {count}",
+      "two": "في الانتظار: {count}",
+      "few": "في الانتظار: {count}",
+      "many": "في الانتظار: {count}",
+      "other": "في الانتظار: {count}"
+    },
+    "offline": {
+      "zero": "بدون اتصال منذ {count} دقيقة",
+      "one": "بدون اتصال منذ دقيقة واحدة",
+      "two": "بدون اتصال منذ دقيقتين",
+      "few": "بدون اتصال منذ {count} دقائق",
+      "many": "بدون اتصال منذ {count} دقيقة",
+      "other": "بدون اتصال منذ {count} دقيقة"
+    },
+    "aria": "المزامنة: {state}"
+  },
+  "tile": {
+    "no_price": "السعر غير محدد"
+  },
+  "stepper": {
+    "decrease": "إنقاص",
+    "increase": "زيادة"
+  },
+  "keypad": {
+    "label": "لوحة الأرقام",
+    "delete": "مسح آخر رقم"
+  },
+  "pin": {
+    "label": "الرمز السري",
+    "entered": {
+      "zero": "الأرقام المدخلة: {count} من {length}",
+      "one": "الأرقام المدخلة: {count} من {length}",
+      "two": "الأرقام المدخلة: {count} من {length}",
+      "few": "الأرقام المدخلة: {count} من {length}",
+      "many": "الأرقام المدخلة: {count} من {length}",
+      "other": "الأرقام المدخلة: {count} من {length}"
+    }
+  },
+  "approval": {
+    "pin": "الرمز السري للمسير",
+    "reason": "السبب",
+    "choose_reason": "اختر السبب، ثم يُدخل المسير رمزه السري.",
+    "wrong_pin": "الرمز السري غير صحيح. أعد المحاولة.",
+    "reasons": {
+      "error": "خطأ",
+      "customer_left": "الزبون غادر",
+      "comped": "على حساب المحل",
+      "breakage": "كسر",
+      "other": "سبب آخر"
+    }
+  },
+  "empty": {
+    "sales_today": "لا توجد مبيعات اليوم",
+    "sales_today_hint": "تظهر تذاكر اليوم هنا بعد أول عملية بيع."
+  },
+  "error": {
+    "printer_offline": "الطابعة غير متصلة — التذكرة في الانتظار.",
+    "printer_offline_action": "تحقق من الورق."
+  },
+  "styleguide": {
+    "title": "دليل الأسلوب",
+    "dev_only": "صفحة للتطوير فقط: لا توجد في التطبيق المنشور.",
+    "language": "اللغة",
+    "theme": "المظهر",
+    "theme_light": "فاتح",
+    "theme_dark": "داكن",
+    "digits": "الأرقام",
+    "digits_latn": "غربية",
+    "digits_arab": "هندية",
+    "lang_fr": "Français",
+    "lang_ar": "العربية",
+    "demo_prices": "أسعار للعرض من docs/01 §6، وليست توصية.",
+    "sections": {
+      "colours": "الألوان",
+      "type": "الخطوط",
+      "button": "الزر",
+      "tile": "بطاقة المنتج",
+      "stepper": "العداد",
+      "keypad": "لوحة الأرقام",
+      "pinpad": "الرمز السري",
+      "sheet": "لوحة الخيارات",
+      "toast": "إشعار",
+      "sync": "حالة المزامنة",
+      "input": "حقل الإدخال",
+      "pill": "شارة",
+      "table": "جدول",
+      "approval": "موافقة المسير",
+      "empty": "حالة فارغة",
+      "error_banner": "شريط الخطأ"
+    },
+    "states": {
+      "default": "افتراضي",
+      "pressed": "مضغوط",
+      "disabled": "معطّل",
+      "loading": "تحميل",
+      "error": "خطأ",
+      "empty": "فارغ",
+      "offline": "بدون اتصال",
+      "success": "نجاح",
+      "selected": "محدد",
+      "office": "المكتب (40 px)"
+    },
+    "type_samples": {
+      "display": "تقرير المساء",
+      "title": "إغلاق الصندوق",
+      "body": "التذكرة تنتظر الطابعة؛ تحقق من الورق.",
+      "label": "الفترة الصباحية"
+    },
+    "kitchen": {
+      "new": "جديد",
+      "preparing": "قيد التحضير",
+      "ready": "جاهز",
+      "late": "متأخر"
+    },
+    "input_label": "المبلغ المستلم",
+    "input_hint": "بالدرهم، والسنتيمات بعد الفاصلة.",
+    "input_error": "مبلغ غير صحيح: اكتب مثلاً 50,00.",
+    "table_caption": "العد في نهاية الفترة",
+    "col_staff": "المستخدم",
+    "col_expected": "المتوقع",
+    "col_counted": "المعدود",
+    "toast_printed": "تمت طباعة الوصل",
+    "sheet_title": "قهوة بالحليب",
+    "sheet_body": "السكر، الحليب، الحجم: تظهر خيارات المنتج هنا.",
+    "staff_sara": "سارة",
+    "staff_ali": "علي"
+  }
+}

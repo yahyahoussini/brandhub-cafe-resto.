@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@import "@brandhub/kit-web/ui/theme.css";
+
+/* This app's own components. */
+@source "./";

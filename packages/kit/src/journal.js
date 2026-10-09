@@ -12,8 +12,11 @@ import { canonicalJson, sha256Hex } from "./crypto.js";
 
 export const GENESIS = "0".repeat(64);
 
-/** Fields of a stored event that are covered by the hash. */
-const HASHED_FIELDS = ["id", "type", "entity", "seq", "device", "staff", "at", "data", "pos", "recvAt"];
+/**
+ * Fields of a stored event that are covered by the hash: the envelope (docs/03 §4, version `v` included) and what the
+ * store adds (`pos`, `recvAt`, `relayedBy`, and the `clockSkew` flag that decides a flagged event's business day).
+ */
+const HASHED_FIELDS = ["id", "type", "entity", "seq", "device", "staff", "at", "data", "v", "pos", "recvAt", "relayedBy", "clockSkew"];
 
 /**
  * @param {Record<string, unknown>} event

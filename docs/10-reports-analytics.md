@@ -11,13 +11,13 @@ Every figure is computed in the TenantStore (and for today on the Station) from 
 | Tickets | closed orders; credit notes counted apart |
 | Average ticket | revenue TTC ÷ tickets |
 | Covers (Resto) | Σ `covers` of closed table orders |
-| Voids | lines voided after sending, orders voided (count and TTC value at the time) |
+| Voids | lines voided after sending, orders voided (count and TTC value at the time); an order emptied by moving all its lines to another table (merge) counts apart as merged, not as a void |
 | Discounts | Σ `discountCentimes`, by staff and reason |
 | Openings without sale | `bank.no_sale` events |
 | Reprints | `bank.reprint` events |
 | Cash gap | `cashVariance(bank, cash)` per bank (`bank.js`), where `cash` is the bank's cash payments and its cash `kredi.repaid` (repayments, deposits, refunds) |
 | Dose gap | `doseVariance` between the open and close readings (`bank.js`); money value at the day's average dose price = coffee revenue ÷ coffee doses sold |
-| Stock gap | last count − (previous count + received − wasted − sold by deductions) |
+| Stock gap | last count − (previous count + received − wasted + adjusted − sold by deductions) (`stock.js`) |
 | Food cost % (Resto) | Σ recipe cost of dishes sold ÷ net HT of those dishes |
 | Kitchen time (Resto) | from `lines.fired` (or `lines.sent`) to `kitchen.status = ready`, median per station |
 

@@ -393,11 +393,27 @@ function opened(ev) {
 
 /**
  * Apply one event to an order. Returns a new state; never mutates the input.
+ * Every refusal is an OrderRuleError with a code (docs/03 §9): a malformed amount or rate caught by money.js becomes
+ * E_BAD_DATA.
  * @param {OrderState | null} state
  * @param {OrderEvent} ev
  * @returns {OrderState}
  */
 export function applyOrderEvent(state, ev) {
+  try {
+    return applyOrderEventUnchecked(state, ev);
+  } catch (e) {
+    if (e instanceof TypeError || e instanceof RangeError) throw fail("E_BAD_DATA", e.message);
+    throw e;
+  }
+}
+
+/**
+ * @param {OrderState | null} state
+ * @param {OrderEvent} ev
+ * @returns {OrderState}
+ */
+function applyOrderEventUnchecked(state, ev) {
   checkEnvelope(ev);
   if (state === null) {
     if (ev.type !== "order.opened") throw fail("E_NOT_OPENED", "the first event of an order must be order.opened");

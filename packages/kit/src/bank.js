@@ -65,11 +65,27 @@ function fail(code, message) {
 }
 
 /**
+ * Apply one event to a bank. Every refusal is a BankRuleError with a code (docs/03 §9): a malformed amount caught by
+ * money.js becomes E_BAD_DATA.
  * @param {BankState | null} state
  * @param {import("./order.js").OrderEvent} ev
  * @returns {BankState}
  */
 export function applyBankEvent(state, ev) {
+  try {
+    return applyBankEventUnchecked(state, ev);
+  } catch (e) {
+    if (e instanceof TypeError || e instanceof RangeError) throw fail("E_BAD_DATA", e.message);
+    throw e;
+  }
+}
+
+/**
+ * @param {BankState | null} state
+ * @param {import("./order.js").OrderEvent} ev
+ * @returns {BankState}
+ */
+function applyBankEventUnchecked(state, ev) {
   if (!ev || !BANK_EVENT_TYPES.includes(ev.type)) throw fail("E_BAD_EVENT", `unknown bank event ${ev && ev.type}`);
   if (!Number.isInteger(ev.seq) || ev.seq < 1) throw fail("E_BAD_EVENT", "seq must be a positive integer");
   const d = ev.data ?? {};

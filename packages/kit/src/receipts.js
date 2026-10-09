@@ -85,7 +85,10 @@ export function addBlock(t, block) {
   const last = t.blocks[t.blocks.length - 1];
   if (last && block.start <= last.end) throw new RangeError("blocks must not overlap");
   const blocks = [...t.blocks, { blockId: block.blockId, start: block.start, end: block.end }];
-  return { ...t, blocks, next: t.next ?? block.start };
+  // Once every held number is used, `next` points past the old block; a block that does not follow it (the rest of a
+  // block was abandoned, docs/04 §10 scenario 8) starts at its own first number.
+  const holdsNext = t.next !== null && blocks.some((b) => t.next !== null && t.next >= b.start && t.next <= b.end);
+  return { ...t, blocks, next: holdsNext ? t.next : block.start };
 }
 
 /**
@@ -117,7 +120,8 @@ export function needsBlock(t, lowWater = DEFAULT_LOW_WATER) {
  */
 export function takeNumber(t) {
   if (t.next === null || remaining(t) === 0) throw new RangeError("no receipt number left; connect to the Station or the internet");
-  const current = /** @type {{ blockId: string, start: number, end: number }} */ (t.blocks.find((b) => t.next !== null && t.next >= b.start && t.next <= b.end));
+  const current = t.blocks.find((b) => t.next !== null && t.next >= b.start && t.next <= b.end);
+  if (!current) throw new RangeError("no receipt number left; connect to the Station or the internet");
   const n = /** @type {number} */ (t.next);
   let next = n + 1;
   if (next > current.end) {

@@ -15,6 +15,11 @@
     "./crypto": "./src/crypto.js",
     "./licence": "./src/licence.js",
     "./control-signature": "./src/control-signature.js",
-    "./journal": "./src/journal.js"
+    "./journal": "./src/journal.js",
+    "./events": "./src/events.js",
+    "./marks": "./src/marks.js",
+    "./stock": "./src/stock.js",
+    "./reports": "./src/reports.js",
+    "./permissions": "./src/permissions.js"
   }
 }

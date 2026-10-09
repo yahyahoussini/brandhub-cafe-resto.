@@ -1,13 +1,17 @@
 # 03 · Domain model — ids, money, events, aggregates, storage, settings
 
-The provided kit (`packages/kit/src`) implements §2–§6 and is tested; code must call it, never re-implement it.
+The kit (`packages/kit/src`) implements this file and is tested; code must call it, never re-implement it: `ids.js` (§2),
+`money.js` (§3), `events.js` (§4 envelope and the §5 type registry), `order.js`, `bank.js`, `marks.js`, `stock.js`
+(§5), `receipts.js` (§7), `marks.js` (§8 defaults), `permissions.js` (D38), `reports.js` (docs/10). Storage (§6) is
+built in prompts 04, 06 and 08.
 
 ## 1. Principles
 1. **Events, never edits** (D20). A device creates an event for every change; the event is stored as sent, forever.
 2. **Three kinds of aggregates.** *Sequenced* (one writer, strict `seq`): orders, banks, tip pools. *Movements* (any
    device; they add up in any order): stock movements, Kredi repayments, clock punches, dose readings. *Marks* (last
    writer wins by `at`, then `device`, then `id`, per entity and type — and per key where the table says so:
-   `settings.set` per `path`, `kitchen.status` per `sentEventId` and `station`): catalog, settings, staff profiles,
+   `settings.set` per `path`, `kitchen.status` per `sentEventId` and `station`, `day.closed` per `businessDate`):
+   catalog, settings, staff profiles,
    layout, kitchen status, table marks. Two types on the same entity never overwrite each other (a PIN change is
    `staff.pin_set`, not `staff.set`).
 3. **Projections are disposable.** Every table other than `events` can be rebuilt from the log (`npm run rebuild` in
@@ -45,7 +49,14 @@ Quantities are thousandths (1000 = 1 unit; 250 = 250 g of a per-kg item). `forma
 }
 ```
 Stored events add `pos` (1, 2, 3 … per client), `recvAt` (server clock), `relayedBy` (the Station, when relayed),
-`prevHash` and `hash` (`journal.js`). The cloud assigns `pos` and the hash; the Station keeps a local `lanPos` only.
+`clockSkew`, `prevHash` and `hash` (`journal.js`, which hashes the envelope with `v` and these fields). The cloud assigns
+`pos` and the hash; the Station keeps a local `lanPos` only.
+
+**Writers** (`events.js`). A paired device writes as its own `dev_…` with `staff` from the PIN session. The back office
+(`office`, an owner or manager session) writes through the Worker as `dev_cloud` with `staff` = the account's `own_…`.
+System events of the cloud (receipt blocks, invoices, the day Z) are `dev_cloud` with `staff` null. `validateEnvelope`
+checks the envelope (codes `E_BAD_EVENT`, `E_TOO_LARGE`), `assertCanWrite` the device kind of each type
+(`E_FORBIDDEN_TYPE`), `validateMark` the payload of a mark (`E_BAD_DATA`).
 
 ## 5. Event catalogue
 **Order `ord` — sequenced — `order.js`**
@@ -106,7 +117,7 @@ note's reason. Kredi charges are the `credit` tenders of closed orders.
 **Marks (last writer wins)**
 | Type | Entity | Data |
 |---|---|---|
-| `catalog.category_set` | `cat_…` | `name`, `station`, `sort`, `visible` |
+| `catalog.category_set` | `cat_…` | `name`, `station`, `sort`, `visible`, `taxClass` (drink · food, débit de boissons, docs/11 §6), `course` (1..6, the default course of its lines, Resto) |
 | `catalog.product_set` | `prd_…` | `categoryId`, `name`, `priceCentimes`, `vatBp`, `doses`, `deductions [{itemId, qtyMilli}]`, `modifierGroups`, `priceByZone {zon_…: centimes}`, `available`, `sort`, `imageKey` |
 | `catalog.product_availability` | `prd_…` | `available` ("86" from the till) |
 | `catalog.modifier_group_set` | `mod_…` | `name`, `min`, `max`, `options [{id, name, priceCentimes}]` |
@@ -131,7 +142,8 @@ Heartbeats, login attempts and sessions are not events: they live in plain table
 CREATE TABLE events (
   pos INTEGER PRIMARY KEY, id TEXT NOT NULL UNIQUE, type TEXT NOT NULL, entity TEXT NOT NULL, seq INTEGER,
   device TEXT NOT NULL, staff TEXT, at INTEGER NOT NULL, recv_at INTEGER NOT NULL, relayed_by TEXT,
-  data TEXT NOT NULL, prev_hash TEXT NOT NULL, hash TEXT NOT NULL, clock_skew INTEGER NOT NULL DEFAULT 0
+  data TEXT NOT NULL, v INTEGER NOT NULL DEFAULT 1, prev_hash TEXT NOT NULL, hash TEXT NOT NULL,
+  clock_skew INTEGER NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX events_entity_seq ON events(entity, seq) WHERE seq IS NOT NULL;
 CREATE INDEX events_entity ON events(entity);
@@ -204,10 +216,14 @@ so devices have them offline.
 | `languages.default` | fr · ar | fr |
 | `ordering.inboxDeviceId` | the till that receives web, QR and order-book orders (Resto V1.1) | the first till |
 | `deposits.vatOnReceipt`, `deposits.keptVatBp` | the accountant's answers (prompt 39); deposits stay off while empty | empty |
-Permissions (who may do what) are settings too, seeded from `data/permissions.json` (D38).
+| `lock.tillSeconds`, `lock.phoneSeconds` | seconds without a tap before the lock screen (docs/06 §1) | 120, 300 |
+| `permissions` | per action of `data/permissions.json`: `{roles?, approval?, capBp?, freeCount?}`, clamped to each `floor` (`permissions.js`) | {} |
+Permissions (who may do what) are settings too, seeded from `data/permissions.json` (D38); `approvals.discountCapBp`
+and `approvals.freeReprints` feed the same rules.
 
 ## 9. Errors
-The kit throws `OrderRuleError` / `BankRuleError` with a `code`. The sync API returns the same codes in `rejected[]`
+The kit throws `OrderRuleError` / `BankRuleError` / `EventError` with a `code` (a malformed amount or rate is
+`E_BAD_DATA`, never an uncoded error). The sync API returns the same codes in `rejected[]`
 (docs/04 §5). The apps translate codes, never messages, through `i18n` keys `errors.<code>`:
 `E_BAD_EVENT`, `E_BAD_DATA`, `E_ENTITY`, `E_SEQ`, `E_NOT_OPENED`, `E_NOT_OWNER`, `E_STATUS`, `E_LINE_UNKNOWN`,
 `E_LINE_SENT`, `E_LINE_VOIDED`, `E_NOT_HELD`, `E_DUP_LINE`, `E_DUP_PAYMENT`, `E_PAYMENT_UNKNOWN`, `E_PAYMENT_VOIDED`,

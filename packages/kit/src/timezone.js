@@ -70,15 +70,30 @@ export function endOfLocalDay(isoDate, tz = DEFAULT_TZ) {
 
 /**
  * Business day of an instant: a service that runs past midnight belongs to the previous day until
- * the cut-off hour (default 05:00), so a café closing at 01:30 reports one day, not two.
+ * the cut-off (default 05:00), so a café closing at 01:30 reports one day, not two.
+ * The day before is taken on the local calendar, not 24 hours earlier, so the night Morocco changes its offset for
+ * Ramadan stays on one day (D26).
  * @param {number} utcMs
- * @param {{ tz?: string, cutoffHour?: number }} [opts]
+ * @param {{ tz?: string, cutoffHour?: number, cutoff?: string }} [opts] `cutoff` "HH:MM" (the setting
+ *   hours.businessDayCutoff) wins over `cutoffHour`
  */
 export function businessDate(utcMs, opts = {}) {
   const tz = opts.tz ?? DEFAULT_TZ;
-  const cutoff = opts.cutoffHour ?? 5;
+  const cutoffMinutes = opts.cutoff !== undefined ? parseHhMm(opts.cutoff) : (opts.cutoffHour ?? 5) * 60;
   const offset = zoneOffsetMinutes(utcMs, tz);
   const local = new Date(utcMs + offset * 60000);
-  if (local.getUTCHours() < cutoff) return localDate(utcMs - 24 * 3600 * 1000, tz);
-  return localDate(utcMs, tz);
+  const minutes = local.getUTCHours() * 60 + local.getUTCMinutes();
+  if (minutes >= cutoffMinutes) return local.toISOString().slice(0, 10);
+  const before = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() - 1));
+  return before.toISOString().slice(0, 10);
+}
+
+/**
+ * "05:00" → 300 minutes after midnight.
+ * @param {string} hhmm
+ */
+export function parseHhMm(hhmm) {
+  const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(hhmm);
+  if (!m) throw new RangeError(`time must be HH:MM, got ${hhmm}`);
+  return Number(m[1]) * 60 + Number(m[2]);
 }

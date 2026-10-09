@@ -17,10 +17,28 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
 | 00 | Orientation | done | 4 Oct 2026 | Node v22.22.0, `npm test` 75/75. 15 contradictions or gaps listed below (not applied). Gate 1 not run, pilot 1 not chosen. |
 | 01 | Repository scaffold | done | 4 Oct 2026 | Node v22.22.0, npm 10.9.4, TypeScript 5.9.3, ESLint 9.39.5, Prettier 3.9.9, Playwright 1.56.1. `npm ci && npm run gate` passes, 94 tests (kit 75 + `bh/logical-css` 19). Details below. |
 | 02 | Design system, fonts, UI parts, i18n | done | 9 Oct 2026 | `npm run gate` passes, 109 tests. `npm run contrast`: 52/52 used pairs pass. 21 Playwright runs pass (16 style guide, 5 behaviour), no external host. UI kit 10.4 KB gzip (21.7 KB with Preact, signals, Lucide), CSS 5.0 KB, fonts 208 KB. Review fixes in a second commit. Details below. |
+| 03 | Business rules: events, marks, stock, reports, permissions | done | 9 Oct 2026 | `npm run gate` passes, 151 tests (kit 120). The café acceptance day of docs/01 §6 gives every number of the spec. Four bugs of the provided kit fixed after a failing test (prompt 00 findings 1, 2, 8, 9). Details below. |
 
 ## Current state
-- Kit: 75 unit tests passing (money, ids, order with moves and customers, bank with the bank guard, receipts, escpos,
-  timezone, licence, control signature, journal).
+- Kit (`packages/kit/src`), 120 unit tests:
+  - provided: `money` (centimes, VAT per line), `ids` (UUIDv7, entity ids), `order` (orders with moves and customers),
+    `bank` (banks, bank guard, dose variance), `receipts` (receipt blocks), `escpos` (printer bytes), `timezone`
+    (Casablanca, business day), `crypto`, `licence`, `control-signature`, `journal` (hash chain);
+  - prompt 03:
+    - `events`: envelope check, registry of the 62 event types (prefix, kind, writer kinds), `dev_cloud`, writer check;
+    - `marks`: last writer wins per key, catalog, settings, staff, layout, kitchen and table marks, the docs/03 §8
+      defaults per product, mark payload check;
+    - `stock`: levels, deductions and recipe in force at closing, credit notes with or without restock, stock gap;
+    - `reports`: `dailyReport` (docs/10 §1 and the Z of §2) and `buildDay(events)`;
+    - `permissions`: `can`, `needsApproval`, `isApprover`, settings overrides clamped to the floors.
+- Fixes to provided modules (prompt 03 allows them after a failing test; tests in
+  `packages/kit/test/provided-fixes.test.js`):
+  - `receipts.addBlock`: a block that does not follow the used one starts at its own first number (it crashed);
+  - `timezone.businessDate`: the day before is taken on the local calendar, so the night after Ramadan is one business
+    day; the cut-off may be "HH:MM";
+  - `order.applyOrderEvent`, `bank.applyBankEvent`: a malformed amount or rate is `E_BAD_DATA`, not an uncoded error;
+  - `journal`: the hash covers `v`, `relayedBy` and `clockSkew` too (no event is stored yet, so nothing to migrate).
+  The 75 original kit tests pass unchanged.
 - Apps: not started. Empty workspaces exist (prompt 01): `@brandhub/kit-web`, `@brandhub/kit-worker`,
   `@brandhub/cafe-worker`, `@brandhub/cafe-web`, `@brandhub/resto-worker`, `@brandhub/resto-web`, `@brandhub/station`,
   `@brandhub/tools`.
@@ -150,9 +168,10 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
   **public**; README §Before you start and docs/14 task 3 ask for a private one. Yahya to choose one repository and make it
   private (still open after prompt 01).
 
-## Orientation findings (prompt 00) — not applied
-Each one was found by one reader and checked by a second agent. Items 1–3 were reproduced with node. Nothing is changed until Yahya
-approves; DECISIONS.md wins unless stated.
+## Orientation findings (prompt 00)
+Each one was found by one reader and checked by a second agent. Items 1–3 were reproduced with node. DECISIONS.md wins
+unless stated. Applied in prompt 03 (kit bugs and spec gaps that prompt allows): 1, 2, 3, 7 (category fields), 8, 9 and
+15 (lock timeouts, permissions). The others wait for Yahya.
 
 1. **Receipt numbering crashes** — `packages/kit/src/receipts.js:88,118-127`, docs/04 §10 scenario 8. After a till uses
    up its blocks, `addBlock` keeps the stale `next`; the next non-contiguous block gives `remaining()=10` and
@@ -197,7 +216,8 @@ approves; DECISIONS.md wins unless stated.
     without one. Fix: rewrite docs/02:39 as the D25 outage fallback.
 15. **Settings missing from docs/03 §8** — the drawer setting (prompt 09), lock-screen timeouts (docs/06), the
     loss-signal thresholds docs/10 §4 calls settings, and the printer `charsPerLine` vs `receipt.width` overlap.
-    Fix: add the paths and defaults in prompt 03.
+    Prompt 03 added `lock.tillSeconds`, `lock.phoneSeconds` and `permissions`; the drawer setting is prompt 09's, the
+    other loss thresholds prompt 17's.
 
 Smaller verified items for later: D11 Arabic-Indic digits not in docs/07 or settings; D20 calls heartbeats marks while
 docs/03 says they are not events; docs/03 says the kit implements §2–§6 (only §7 is provided); docs/04 §9 cites docs/03

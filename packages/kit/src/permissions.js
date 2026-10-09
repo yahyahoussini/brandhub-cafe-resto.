@@ -29,9 +29,16 @@ import { PAYMENT_CORRECTION_WINDOW_MS } from "./order.js";
  * @property {number} [reprintsDone] reprints already made of this ticket (reprint)
  */
 
-/** Approval strength, weakest first: a client may move up, and down only to the floor. */
-const STRENGTH = { never: 0, after_2_min: 1, if_sent: 2, always: 3 };
-const FLOORS = { approval: "always", approval_if_sent: "if_sent", approval_after_2_min: "after_2_min" };
+const APPROVALS = ["always", "if_sent", "after_2_min", "never"];
+/**
+ * What a client may choose above each floor. `if_sent` and `after_2_min` answer different questions, so neither is
+ * "stronger" than the other: only the floor itself or `always` keeps the floor's protection.
+ */
+const ALLOWED_ABOVE_FLOOR = {
+  approval: ["always"],
+  approval_if_sent: ["if_sent", "always"],
+  approval_after_2_min: ["after_2_min", "always"],
+};
 
 /** @type {Record<string, any>} */
 const DEFAULT_ACTIONS = /** @type {any} */ (defaults).actions;
@@ -59,19 +66,30 @@ export function effectivePermissions(settings = {}) {
       approval: def.approval ?? "never",
       reauth: def.reauth === true,
     };
-    // approval: a client may change it, never weaker than the floor
+    // The owner can never be taken off an action the defaults give the owner (settings, permissions, staff…): a mistaken
+    // or hostile override must not lock the owner out of their own business.
+    if (def.roles.includes("owner") && !rule.roles.includes("owner")) {
+      rule.roles.unshift("owner");
+      clamped.push(`${action}.roles: the owner cannot be removed`);
+    }
+    // approval: a client may change it, never below the floor
     if (o.approval !== undefined) {
-      if (!(o.approval in STRENGTH)) clamped.push(`${action}.approval: unknown value ${o.approval}`);
+      if (!APPROVALS.includes(o.approval)) clamped.push(`${action}.approval: unknown value ${o.approval}`);
       else rule.approval = o.approval;
     }
-    const floor = typeof def.floor === "string" ? /** @type {Record<string, string>} */ (FLOORS)[def.floor] : undefined;
-    if (floor && STRENGTH[rule.approval] < STRENGTH[/** @type {keyof typeof STRENGTH} */ (floor)]) {
-      clamped.push(`${action}.approval: ${rule.approval} is below the floor ${floor}`);
-      rule.approval = /** @type {ActionRule["approval"]} */ (floor);
+    const allowed = typeof def.floor === "string" ? /** @type {Record<string, string[]>} */ (ALLOWED_ABOVE_FLOOR)[def.floor] : undefined;
+    if (allowed && !allowed.includes(rule.approval)) {
+      clamped.push(`${action}.approval: ${rule.approval} is below the floor ${allowed[0]}`);
+      rule.approval = /** @type {ActionRule["approval"]} */ (allowed[0]);
     }
     if (def.capBp) {
       /** @type {Record<string, number>} */
-      const caps = { ...def.capBp, ...(settings["approvals.discountCapBp"] ?? {}), ...(o.capBp ?? {}) };
+      const caps = { ...def.capBp };
+      for (const [role, cap] of Object.entries({ ...(settings["approvals.discountCapBp"] ?? {}), ...(o.capBp ?? {}) })) {
+        // fail closed: a malformed cap keeps the default instead of disabling the check (NaN compares false)
+        if (Number.isSafeInteger(cap) && cap >= 0 && cap <= 10000) caps[role] = cap;
+        else clamped.push(`${action}.capBp.${role}: ${String(cap)} is not 0..10000`);
+      }
       const max = def.floor?.cashierMaxBp;
       if (max !== undefined && caps.cashier > max) {
         clamped.push(`${action}.capBp.cashier: ${caps.cashier} is above the floor ${max}`);
@@ -80,7 +98,11 @@ export function effectivePermissions(settings = {}) {
       rule.capBp = caps;
     }
     if (def.freeCount !== undefined) {
-      const wanted = o.freeCount ?? settings["approvals.freeReprints"] ?? def.freeCount;
+      let wanted = o.freeCount ?? settings["approvals.freeReprints"] ?? def.freeCount;
+      if (!Number.isSafeInteger(wanted) || wanted < 0) {
+        clamped.push(`${action}.freeCount: ${String(wanted)} is not a whole number`);
+        wanted = def.freeCount;
+      }
       const max = def.floor?.maxFree ?? wanted;
       rule.freeCount = Math.max(0, Math.min(wanted, max));
       if (wanted > max) clamped.push(`${action}.freeCount: ${wanted} is above the floor ${max}`);

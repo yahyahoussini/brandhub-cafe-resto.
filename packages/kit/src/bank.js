@@ -65,15 +65,13 @@ function fail(code, message) {
 }
 
 /**
- * Apply one event to a bank. Every refusal is a BankRuleError with a code (docs/03 §9): a malformed amount caught by
- * money.js becomes E_BAD_DATA.
- * @param {BankState | null} state
- * @param {import("./order.js").OrderEvent} ev
- * @returns {BankState}
+ * money.js checks on event data: a malformed amount is refused with a code (E_BAD_DATA, docs/03 §9).
+ * @param {unknown} n
+ * @param {string} name
  */
-export function applyBankEvent(state, ev) {
+function centimes(n, name) {
   try {
-    return applyBankEventUnchecked(state, ev);
+    assertCentimes(n, name);
   } catch (e) {
     if (e instanceof TypeError || e instanceof RangeError) throw fail("E_BAD_DATA", e.message);
     throw e;
@@ -85,7 +83,7 @@ export function applyBankEvent(state, ev) {
  * @param {import("./order.js").OrderEvent} ev
  * @returns {BankState}
  */
-function applyBankEventUnchecked(state, ev) {
+export function applyBankEvent(state, ev) {
   if (!ev || !BANK_EVENT_TYPES.includes(ev.type)) throw fail("E_BAD_EVENT", `unknown bank event ${ev && ev.type}`);
   if (!Number.isInteger(ev.seq) || ev.seq < 1) throw fail("E_BAD_EVENT", "seq must be a positive integer");
   const d = ev.data ?? {};
@@ -93,7 +91,7 @@ function applyBankEventUnchecked(state, ev) {
     if (ev.type !== "bank.opened" || ev.seq !== 1) throw fail("E_NOT_OPENED", "a bank starts with bank.opened, seq 1");
     if (!BANK_KINDS.includes(d.kind)) throw fail("E_BAD_DATA", "kind must be till or waiter");
     if (typeof d.holder !== "string" || !d.holder) throw fail("E_BAD_DATA", "holder is required");
-    assertCentimes(d.floatCentimes, "floatCentimes");
+    centimes(d.floatCentimes, "floatCentimes");
     if (d.floatCentimes < 0) throw fail("E_BAD_DATA", "float cannot be negative");
     return {
       id: ev.entity,
@@ -127,7 +125,7 @@ function applyBankEventUnchecked(state, ev) {
     case "bank.cash_in":
     case "bank.cash_out": {
       if (s.status !== "open") throw fail("E_STATUS", "bank already counted");
-      assertCentimes(d.amountCentimes, "amountCentimes");
+      centimes(d.amountCentimes, "amountCentimes");
       if (d.amountCentimes <= 0) throw fail("E_BAD_DATA", "amount must be positive");
       if (typeof d.reason !== "string" || !d.reason.trim()) throw fail("E_BAD_DATA", "a reason is required");
       if (ev.type === "bank.cash_out" && !d.approvedBy) throw fail("E_APPROVAL_REQUIRED", "cash out needs a manager's approval");
@@ -149,7 +147,7 @@ function applyBankEventUnchecked(state, ev) {
     }
     case "bank.counted": {
       if (s.status !== "open") throw fail("E_STATUS", "bank already counted");
-      assertCentimes(d.countedCentimes, "countedCentimes");
+      centimes(d.countedCentimes, "countedCentimes");
       if (d.countedCentimes < 0) throw fail("E_BAD_DATA", "counted cash cannot be negative");
       s.countedCentimes = d.countedCentimes;
       s.breakdown = d.breakdown && typeof d.breakdown === "object" ? { ...d.breakdown } : null;

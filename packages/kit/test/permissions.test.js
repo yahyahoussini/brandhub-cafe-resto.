@@ -64,6 +64,30 @@ test("settings tighten or relax, never below the floor", () => {
   ]);
 });
 
+test("a payment correction keeps its 2-minute approval whatever 'stronger-looking' rule is chosen", () => {
+  const settings = { permissions: { payment_correction: { approval: "if_sent" } } };
+  assert.equal(effectivePermissions(settings).actions.payment_correction.approval, "after_2_min");
+  assert.equal(needsApproval(cashier, "payment_correction", { ageMs: 3_600_000, settings }), true);
+  assert.equal(effectivePermissions({ permissions: { void_order: { approval: "after_2_min" } } }).actions.void_order.approval, "if_sent");
+});
+
+test("malformed caps and reprint counts fail closed", () => {
+  const settings = { "approvals.discountCapBp": { cashier: "20%" }, "approvals.freeReprints": "deux", permissions: { discount: { capBp: { manager: "max" } } } };
+  const { actions, clamped } = effectivePermissions(settings);
+  assert.equal(actions.discount.capBp?.cashier, 1000);
+  assert.equal(actions.discount.capBp?.manager, 5000);
+  assert.equal(actions.reprint.freeCount, 1);
+  assert.equal(needsApproval(cashier, "discount", { discountBp: 10000, settings }), true);
+  assert.equal(needsApproval(cashier, "reprint", { reprintsDone: 4, settings }), true);
+  assert.equal(clamped.length, 3);
+});
+
+test("the owner cannot be locked out of an action the owner has by default", () => {
+  const settings = { permissions: { permissions_edit: { roles: ["manager"] }, settings: { roles: [] }, staff_edit: { roles: ["manager"] } } };
+  for (const action of ["permissions_edit", "settings", "staff_edit"]) assert.equal(can({ role: "owner" }, action, { settings }), true, action);
+  assert.equal(can(manager, "staff_edit", { settings }), true, "delegating is still allowed");
+});
+
 test("approvers: flagged canApprove, named in the setting, or owners and managers by default", () => {
   assert.equal(isApprover(manager), true);
   assert.equal(isApprover(cashier), false);

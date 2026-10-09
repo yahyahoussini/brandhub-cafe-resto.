@@ -101,6 +101,56 @@ test("mark payloads are checked", () => {
   assert.ok(validateMark(mark("catalog.product_set", newId("prd"), { name: { fr: "A", ar: "ب" }, priceCentimes: null, vatBp: null }, 1)), "a template product has no price yet");
 });
 
+test("settings values outside docs/03 §8 are refused", () => {
+  const bad = (/** @type {string} */ path, /** @type {unknown} */ value) =>
+    assert.throws(() => validateMark(mark("settings.set", TNT, { path, value }, 1)), (/** @type {any} */ e) => e.code === "E_BAD_DATA", `${path}=${JSON.stringify(value)}`);
+  bad("taxes.defaultVatBp", 5000);
+  bad("receipt.width", 33);
+  bad("service.mode", "self");
+  bad("lock.tillSeconds", -5);
+  bad("approvals.discountCapBp", { cashier: "20%" });
+  bad("approvals.freeReprints", "deux");
+  bad("approvals.freeReprints", 2.5);
+  bad("permissions", { fly: {} });
+  bad("permissions", { discount: { capBp: { manager: "max" } } });
+  bad("reports.thresholds", { cashGapCentimes: "x" });
+  bad("__proto__", { x: 1 });
+  bad("toString", 1);
+  assert.throws(() => setting(emptyMarks("cafe"), "toString"), RangeError);
+});
+
+test("catalog, staff and day payloads keep money whole and flags boolean", () => {
+  const bad = (/** @type {any} */ ev) => assert.throws(() => validateMark(ev), (/** @type {any} */ e) => e.code === "E_BAD_DATA", ev.type);
+  bad(mark("catalog.product_set", newId("prd"), { name: { fr: "A", ar: "ب" }, priceCentimes: 500, priceByZone: { zon_x: 12.5 } }, 1));
+  bad(mark("catalog.product_set", newId("prd"), { name: { fr: "A", ar: "ب" }, priceCentimes: 500, available: "false" }, 1));
+  bad(mark("catalog.modifier_group_set", newId("mod"), { name: { fr: "Sucre", ar: "سكر" }, options: [{ id: "o", priceCentimes: 2.5 }] }, 1));
+  bad(mark("stock.item_set", newId("itm"), { name: "Café", costCentimes: 0.3 }, 1));
+  bad(mark("staff.set", newId("stf"), { displayName: "Ali", role: "waiter", active: 0 }, 1));
+  bad(mark("day.closed", TNT, { businessDate: "2026-02-31" }, 1));
+});
+
+test("every catalog mark reaches its projection", () => {
+  const mod = newId("mod");
+  const prd = newId("prd");
+  const itm = newId("itm");
+  const s = applyMarks(emptyMarks("resto"), [
+    mark("catalog.modifier_group_set", mod, { name: { fr: "Sucre", ar: "سكر" }, min: 0, max: 1, options: [{ id: "o1", name: { fr: "Sans", ar: "بدون" }, priceCentimes: 0 }] }, 1),
+    mark("catalog.set_menu_set", prd, { steps: [], priceCentimes: 9000 }, 1),
+    mark("catalog.recipe_set", prd, { lines: [], yieldMilli: 1000, effectiveFrom: 1 }, 1),
+    mark("stock.item_set", itm, { name: "Café", unit: "g", costCentimes: 25 }, 1),
+  ]);
+  assert.equal(s.catalog.modifierGroups[mod].max, 1);
+  assert.equal(s.catalog.setMenus[prd].priceCentimes, 9000);
+  assert.equal(s.catalog.recipes[prd].yieldMilli, 1000);
+  assert.equal(s.catalog.stockItems[itm].unit, "g");
+});
+
+test("a mark's data never overrides its entity id", () => {
+  const prd = newId("prd");
+  const s = applyMarks(emptyMarks("cafe"), [mark("catalog.product_set", prd, { id: "prd_other", name: { fr: "A", ar: "ب" }, priceCentimes: 1 }, 1)]);
+  assert.equal(s.catalog.products[prd].id, prd);
+});
+
 test("property: any order and any batching of marks gives the same state", () => {
   const rng = seeded(7);
   const entities = { tbl: [newId("tbl"), newId("tbl")], prd: [newId("prd"), newId("prd")], stf: [newId("stf")] };

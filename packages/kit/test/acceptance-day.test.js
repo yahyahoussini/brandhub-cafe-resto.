@@ -79,7 +79,7 @@ function acceptanceDay() {
   sale(log, { device: TILL, staff: SARA, bank: TILL_BANK, when: at(9, 0), lines: [["jus", 1], ["cafeCreme", 1]], pay: { tender: "card_external", amount: 2700, reference: "1234" }, receiptNo: "C1-000002" });
   sale(log, { device: TILL, staff: SARA, bank: TILL_BANK, when: at(10, 0), lines: [["the", 3]], pay: { tender: "maroc_pay", amount: 2400, reference: "MP-5521" }, receiptNo: "C1-000003" });
 
-  // 3. Terrasse: Ali's waiter bank (float 0), table T4 sent to the bar, paid cash on his phone, S1-000001.
+  // 3. Terrasse: Ali's waiter bank (float 0), table T4 sent to the bar, paid cash on Ali's phone, S1-000001.
   log.emit({ device: PHONE, staff: ALI, type: "bank.opened", entity: ALI_BANK, data: { kind: "waiter", holder: ALI, floatCentimes: 0 }, at: at(10, 30) });
   sale(log, { device: PHONE, staff: ALI, bank: ALI_BANK, when: at(11, 0), mode: "table", tableId: newId("tbl"), lines: [["nssNss", 2], ["msemen", 2]], send: true, pay: { tender: "cash", amount: 3000, tendered: 5000 }, receiptNo: "S1-000001" });
 

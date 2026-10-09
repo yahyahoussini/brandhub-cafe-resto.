@@ -1,7 +1,7 @@
 // @ts-check
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CLOUD_DEVICE, EVENT_TYPES, assertCanWrite, canWrite, validateEnvelope } from "../src/events.js";
+import { CLOUD_DEVICE, EVENT_TYPES, assertCanWrite, canWrite, validateEnvelope, validateMovement } from "../src/events.js";
 import { ORDER_EVENT_TYPES } from "../src/order.js";
 import { BANK_EVENT_TYPES } from "../src/bank.js";
 import { newId, uuidv7 } from "../src/ids.js";
@@ -84,6 +84,38 @@ test("the registry covers every order and bank event of the kit, and every type 
   ];
   for (const type of docs03) assert.ok(EVENT_TYPES[type], type);
   assert.equal(Object.keys(EVENT_TYPES).length, ORDER_EVENT_TYPES.length + BANK_EVENT_TYPES.length + docs03.length);
+});
+
+test("type names from Object.prototype are unknown types, with a code", () => {
+  for (const type of ["toString", "constructor", "__proto__", "hasOwnProperty"]) rejects({ type }, "E_BAD_EVENT");
+});
+
+test("only the cloud writes the day Z; a bank's Z comes from the device that holds the bank", () => {
+  const z = { ...good(), type: "z.closed", seq: null, data: { businessDate: "2026-11-30", totals: {}, hash: "0".repeat(64) } };
+  const dayZ = validateEnvelope({ ...z, entity: newId("tnt") });
+  assert.throws(() => assertCanWrite(dayZ, "till"), (/** @type {any} */ e) => e.code === "E_FORBIDDEN_TYPE");
+  assertCanWrite({ ...dayZ, device: CLOUD_DEVICE, staff: null }, "cloud");
+  assertCanWrite(validateEnvelope({ ...z, entity: newId("bnk") }), "till");
+});
+
+test("a paired device never signs with an owner account", () => {
+  const ev = validateEnvelope({ ...good(), staff: newId("own") });
+  assert.throws(() => assertCanWrite(ev, "till"), (/** @type {any} */ e) => e.code === "E_FORBIDDEN_TYPE");
+});
+
+test("movement payloads are checked before they are stored (E_BAD_DATA)", () => {
+  const mv = (/** @type {string} */ type, /** @type {string} */ prefix, /** @type {any} */ data) => ({ ...good(), type, entity: newId(prefix), seq: null, data });
+  const bad = (/** @type {any} */ ev) => assert.throws(() => validateMovement(validateEnvelope(ev)), (/** @type {any} */ e) => e.code === "E_BAD_DATA", ev.type);
+  bad(mv("kredi.repaid", "cus", { amountCentimes: 12.5, tender: "cash", bankId: newId("bnk") }));
+  bad(mv("kredi.repaid", "cus", { amountCentimes: 1000, tender: "cash" }));
+  bad(mv("kredi.repaid", "cus", { amountCentimes: -1000, tender: "card_external" }));
+  bad(mv("machine.reading", "mch", { reading: -3, kind: "open", businessDate: "2026-11-30" }));
+  bad(mv("machine.reading", "mch", { reading: 3, kind: "open", businessDate: "2026-02-31" }));
+  bad(mv("stock.received", "itm", { qtyMilli: "500" }));
+  bad(mv("stock.wasted", "itm", { qtyMilli: -200, reason: "x" }));
+  bad(mv("machine.off_till", "mch", { doses: 0, reason: "test" }));
+  assert.ok(validateMovement(validateEnvelope(mv("kredi.repaid", "cus", { amountCentimes: 1000, tender: "cash", bankId: newId("bnk") }))));
+  assert.ok(validateMovement(validateEnvelope(mv("stock.adjusted", "itm", { qtyMilli: -200, reason: "recount" }))));
 });
 
 test("a dead letter's resolution points at the rejected event's id", () => {

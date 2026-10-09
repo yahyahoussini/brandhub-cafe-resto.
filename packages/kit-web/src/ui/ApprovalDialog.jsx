@@ -13,7 +13,7 @@ export const APPROVAL_REASONS = /** @type {const} */ (["error", "customer_left",
 /** @typedef {(typeof APPROVAL_REASONS)[number]} ApprovalReason */
 
 /**
- * "Validation gérant" (docs/06 §1): the manager picks a reason, then types his PIN on the same device. The caller
+ * "Validation gérant" (docs/06 §1): the manager picks a reason, then types their PIN on the same device. The caller
  * checks the PIN offline and records the approval in the event (`approvedBy`), never a shared password. Each opening
  * starts with no reason (or `initialReason`); Escape or Annuler calls `onCancel`; focus stays inside while it is open.
  * @param {{

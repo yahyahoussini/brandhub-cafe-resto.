@@ -1,9 +1,10 @@
 # 03 · Domain model — ids, money, events, aggregates, storage, settings
 
-The kit (`packages/kit/src`) implements this file and is tested; code must call it, never re-implement it: `ids.js` (§2),
-`money.js` (§3), `events.js` (§4 envelope and the §5 type registry), `order.js`, `bank.js`, `marks.js`, `stock.js`
-(§5), `receipts.js` (§7), `marks.js` (§8 defaults), `permissions.js` (D38), `reports.js` (docs/10). Storage (§6) is
-built in prompts 04, 06 and 08.
+The kit (`packages/kit/src`) implements §2–§5 and §7–§8 and is tested; code must call it, never re-implement it:
+`ids.js` (§2), `money.js` (§3), `events.js` (§4 envelope, the §5 type registry and movement payloads), `order.js`,
+`bank.js`, `marks.js`, `stock.js` (§5), `receipts.js` (§7), `marks.js` (§8 defaults and checks), `permissions.js`
+(D38), `reports.js` (docs/10). Not yet: the tip-pool reducer (V1.1, prompt 21). Storage (§6) is built in prompts 04, 06
+and 08.
 
 ## 1. Principles
 1. **Events, never edits** (D20). A device creates an event for every change; the event is stored as sent, forever.
@@ -49,14 +50,17 @@ Quantities are thousandths (1000 = 1 unit; 250 = 250 g of a per-kg item). `forma
 }
 ```
 Stored events add `pos` (1, 2, 3 … per client), `recvAt` (server clock), `relayedBy` (the Station, when relayed),
-`clockSkew`, `prevHash` and `hash` (`journal.js`, which hashes the envelope with `v` and these fields). The cloud assigns
+`clockSkew`, `prevHash` and `hash` (`journal.js`, which hashes the envelope with `v` and these fields; `clockSkew` as
+0/1). The cloud assigns
 `pos` and the hash; the Station keeps a local `lanPos` only.
 
 **Writers** (`events.js`). A paired device writes as its own `dev_…` with `staff` from the PIN session. The back office
 (`office`, an owner or manager session) writes through the Worker as `dev_cloud` with `staff` = the account's `own_…`.
 System events of the cloud (receipt blocks, invoices, the day Z) are `dev_cloud` with `staff` null. `validateEnvelope`
-checks the envelope (codes `E_BAD_EVENT`, `E_TOO_LARGE`), `assertCanWrite` the device kind of each type
-(`E_FORBIDDEN_TYPE`), `validateMark` the payload of a mark (`E_BAD_DATA`).
+checks the envelope (codes `E_BAD_EVENT`, `E_TOO_LARGE`), `assertCanWrite` the device kind of each type and that a
+paired device never signs with an `own_…` (`E_FORBIDDEN_TYPE`; the day Z on `tnt_…` is the cloud's only),
+`validateMovement` and `validateMark` the payload of a movement or a mark (`E_BAD_DATA`; each setting against the
+Values column of §8).
 
 ## 5. Event catalogue
 **Order `ord` — sequenced — `order.js`**

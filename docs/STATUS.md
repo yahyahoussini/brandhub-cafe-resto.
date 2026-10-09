@@ -17,19 +17,21 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
 | 00 | Orientation | done | 4 Oct 2026 | Node v22.22.0, `npm test` 75/75. 15 contradictions or gaps listed below (not applied). Gate 1 not run, pilot 1 not chosen. |
 | 01 | Repository scaffold | done | 4 Oct 2026 | Node v22.22.0, npm 10.9.4, TypeScript 5.9.3, ESLint 9.39.5, Prettier 3.9.9, Playwright 1.56.1. `npm ci && npm run gate` passes, 94 tests (kit 75 + `bh/logical-css` 19). Details below. |
 | 02 | Design system, fonts, UI parts, i18n | done | 9 Oct 2026 | `npm run gate` passes, 109 tests. `npm run contrast`: 52/52 used pairs pass. 21 Playwright runs pass (16 style guide, 5 behaviour), no external host. UI kit 10.4 KB gzip (21.7 KB with Preact, signals, Lucide), CSS 5.0 KB, fonts 208 KB. Review fixes in a second commit. Details below. |
-| 03 | Business rules: events, marks, stock, reports, permissions | done | 9 Oct 2026 | `npm run gate` passes, 151 tests (kit 120). The café acceptance day of docs/01 §6 gives every number of the spec. Four bugs of the provided kit fixed after a failing test (prompt 00 findings 1, 2, 8, 9). Details below. |
+| 03 | Business rules: events, marks, stock, reports, permissions | done | 9 Oct 2026 | `npm run gate` passes, 172 tests (kit 138). The café acceptance day of docs/01 §6 gives every number of the spec. Four bugs of the provided kit fixed after a failing test (prompt 00 findings 1, 2, 8, 9). Review fixes in a second commit. Details below. |
 
 ## Current state
-- Kit (`packages/kit/src`), 120 unit tests:
+- Kit (`packages/kit/src`), 138 unit tests:
   - provided: `money` (centimes, VAT per line), `ids` (UUIDv7, entity ids), `order` (orders with moves and customers),
     `bank` (banks, bank guard, dose variance), `receipts` (receipt blocks), `escpos` (printer bytes), `timezone`
     (Casablanca, business day), `crypto`, `licence`, `control-signature`, `journal` (hash chain);
   - prompt 03:
-    - `events`: envelope check, registry of the 62 event types (prefix, kind, writer kinds), `dev_cloud`, writer check;
+    - `events`: envelope check, registry of the 62 event types (prefix, kind, writer kinds), `dev_cloud`, writer check,
+      movement payload check;
     - `marks`: last writer wins per key, catalog, settings, staff, layout, kitchen and table marks, the docs/03 §8
       defaults per product, mark payload check;
     - `stock`: levels, deductions and recipe in force at closing, credit notes with or without restock, stock gap;
-    - `reports`: `dailyReport` (docs/10 §1 and the Z of §2) and `buildDay(events)`;
+    - `reports`: `dailyReport` (docs/10 §1, the day Z and each bank's Z of §2) and `buildDay(events)`, with the
+      clock-skew rule of docs/04 §6;
     - `permissions`: `can`, `needsApproval`, `isApprover`, settings overrides clamped to the floors.
 - Fixes to provided modules (prompt 03 allows them after a failing test; tests in
   `packages/kit/test/provided-fixes.test.js`):
@@ -37,8 +39,21 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
   - `timezone.businessDate`: the day before is taken on the local calendar, so the night after Ramadan is one business
     day; the cut-off may be "HH:MM";
   - `order.applyOrderEvent`, `bank.applyBankEvent`: a malformed amount or rate is `E_BAD_DATA`, not an uncoded error;
-  - `journal`: the hash covers `v`, `relayedBy` and `clockSkew` too (no event is stored yet, so nothing to migrate).
+  - `journal`: the hash covers `v`, `relayedBy` and `clockSkew` (as 0/1) too (no event is stored yet, so nothing to
+    migrate).
   The 75 original kit tests pass unchanged.
+- Prompt 03 review: 3 agents attacked the new modules, a second pass reproduced each finding, and 22 were confirmed and
+  fixed. The main ones:
+  - a bad setting value could switch off discount and reprint approvals; it now fails closed, and every setting is
+    checked against docs/03 §8;
+  - "if_sent" removed the 2-minute payment-correction floor;
+  - an override could lock the owner out of settings and permissions;
+  - re-receiving a used-up receipt block handed out numbers again (a regression of the first fix);
+  - movement payloads were not checked;
+  - the dose gap with several machines could hide a reset or a missing reading;
+  - the clock-skew rule was missing from reports;
+  - the average ticket did not include credit notes in revenue;
+  - each bank's Z had no ticket series, VAT or Kredi cash line.
 - Apps: not started. Empty workspaces exist (prompt 01): `@brandhub/kit-web`, `@brandhub/kit-worker`,
   `@brandhub/cafe-worker`, `@brandhub/cafe-web`, `@brandhub/resto-worker`, `@brandhub/resto-web`, `@brandhub/station`,
   `@brandhub/tools`.

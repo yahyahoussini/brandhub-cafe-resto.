@@ -25,6 +25,8 @@ function hashedContent(event) {
   /** @type {Record<string, unknown>} */
   const out = {};
   for (const k of HASHED_FIELDS) out[k] = event[k] === undefined ? null : event[k];
+  // The flag is stored as 0/1 (docs/03 §6 clock_skew INTEGER DEFAULT 0): hash it the same whether absent, false or 0.
+  out.clockSkew = event.clockSkew ? 1 : 0;
   return canonicalJson(out);
 }
 

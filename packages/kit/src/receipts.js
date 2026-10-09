@@ -82,13 +82,16 @@ export function newTillNumbering(prefix) {
 export function addBlock(t, block) {
   if (block.prefix !== t.prefix) throw new RangeError("block belongs to another series");
   if (t.blocks.some((b) => b.blockId === block.blockId)) return t;
+  // A repeated answer for a block already used up (dropped from `blocks`): nothing new to number with.
+  if (t.next !== null && block.end < t.next) return t;
   const last = t.blocks[t.blocks.length - 1];
   if (last && block.start <= last.end) throw new RangeError("blocks must not overlap");
   const blocks = [...t.blocks, { blockId: block.blockId, start: block.start, end: block.end }];
   // Once every held number is used, `next` points past the old block; a block that does not follow it (the rest of a
   // block was abandoned, docs/04 §10 scenario 8) starts at its own first number.
   const holdsNext = t.next !== null && blocks.some((b) => t.next !== null && t.next >= b.start && t.next <= b.end);
-  return { ...t, blocks, next: holdsNext ? t.next : block.start };
+  // Never move `next` back: a number already used is never handed out again (D22).
+  return { ...t, blocks, next: holdsNext ? t.next : Math.max(t.next ?? block.start, block.start) };
 }
 
 /**

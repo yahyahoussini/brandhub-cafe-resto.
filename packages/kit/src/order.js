@@ -175,6 +175,22 @@ function checkEnvelope(ev) {
 }
 
 /**
+ * Runs a money.js check or computation on event data: a malformed amount or rate is the event's fault, so it is
+ * refused with a code (E_BAD_DATA, docs/03 §9) instead of an uncoded TypeError or RangeError.
+ * @template T
+ * @param {() => T} f
+ * @returns {T}
+ */
+function coded(f) {
+  try {
+    return f();
+  } catch (e) {
+    if (e instanceof TypeError || e instanceof RangeError) throw fail("E_BAD_DATA", e.message);
+    throw e;
+  }
+}
+
+/**
  * @param {unknown} v
  * @param {string} what
  */
@@ -289,13 +305,13 @@ function findHeldLine(s, lineId) {
  */
 function buildLine(d, refund) {
   const lineId = requireString(d.lineId, "lineId");
-  assertCentimes(d.unitCentimes, "unitCentimes");
+  coded(() => assertCentimes(d.unitCentimes, "unitCentimes"));
   if (d.unitCentimes < 0) throw fail("E_BAD_DATA", "unit price cannot be negative");
   if (!Number.isSafeInteger(d.qtyMilli) || d.qtyMilli === 0) throw fail("E_BAD_DATA", "qtyMilli must be a non-zero integer");
   if (refund ? d.qtyMilli > 0 : d.qtyMilli < 0) throw fail("E_REFUND_SIGN", "credit notes use negative quantities, sales positive ones");
-  assertRateBp(d.vatBp);
+  coded(() => assertRateBp(d.vatBp));
   const modifiers = (d.modifiers ?? []).map((/** @type {any} */ m) => {
-    assertCentimes(m.priceCentimes, "modifier.priceCentimes");
+    coded(() => assertCentimes(m.priceCentimes, "modifier.priceCentimes"));
     return { id: requireString(m.id, "modifier.id"), name: checkName(m.name), priceCentimes: m.priceCentimes };
   });
   const doses = d.doses ?? 0;
@@ -330,7 +346,7 @@ function buildLine(d, refund) {
     totalCentimes: 0,
   };
   if (unitWithModifiers(line) < 0) throw fail("E_BAD_DATA", "unit price with options cannot be negative");
-  line.totalCentimes = lineTotal(unitWithModifiers(line), line.qtyMilli);
+  line.totalCentimes = coded(() => lineTotal(unitWithModifiers(line), line.qtyMilli));
   return line;
 }
 
@@ -393,27 +409,11 @@ function opened(ev) {
 
 /**
  * Apply one event to an order. Returns a new state; never mutates the input.
- * Every refusal is an OrderRuleError with a code (docs/03 §9): a malformed amount or rate caught by money.js becomes
- * E_BAD_DATA.
  * @param {OrderState | null} state
  * @param {OrderEvent} ev
  * @returns {OrderState}
  */
 export function applyOrderEvent(state, ev) {
-  try {
-    return applyOrderEventUnchecked(state, ev);
-  } catch (e) {
-    if (e instanceof TypeError || e instanceof RangeError) throw fail("E_BAD_DATA", e.message);
-    throw e;
-  }
-}
-
-/**
- * @param {OrderState | null} state
- * @param {OrderEvent} ev
- * @returns {OrderState}
- */
-function applyOrderEventUnchecked(state, ev) {
   checkEnvelope(ev);
   if (state === null) {
     if (ev.type !== "order.opened") throw fail("E_NOT_OPENED", "the first event of an order must be order.opened");
@@ -448,7 +448,7 @@ function applyOrderEventUnchecked(state, ev) {
       if (!Number.isSafeInteger(d.qtyMilli) || d.qtyMilli === 0) throw fail("E_BAD_DATA", "qtyMilli must be a non-zero integer");
       if (isRefund(s) ? d.qtyMilli > 0 : d.qtyMilli < 0) throw fail("E_REFUND_SIGN", "quantity sign does not match the order");
       line.qtyMilli = d.qtyMilli;
-      line.totalCentimes = lineTotal(unitWithModifiers(line), line.qtyMilli);
+      line.totalCentimes = coded(() => lineTotal(unitWithModifiers(line), line.qtyMilli));
       break;
     }
     case "line.voided": {
@@ -490,7 +490,7 @@ function applyOrderEventUnchecked(state, ev) {
       requireOpen(s);
       if (isRefund(s)) throw fail("E_BAD_DATA", "no discount on a credit note");
       if (d.kind !== "percent" && d.kind !== "amount") throw fail("E_BAD_DATA", "discount kind must be percent or amount");
-      discountAmount(1, { kind: d.kind, value: d.value }); // validates value
+      coded(() => discountAmount(1, { kind: d.kind, value: d.value })); // validates value
       s.discount = { kind: d.kind, value: d.value, reason: typeof d.reason === "string" ? d.reason.slice(0, 200) : "", approvedBy: d.approvedBy ?? null };
       break;
     }
@@ -522,14 +522,14 @@ function applyOrderEventUnchecked(state, ev) {
       const paymentId = requireString(d.paymentId, "paymentId");
       if (s.payments.some((p) => p.paymentId === paymentId)) throw fail("E_DUP_PAYMENT", `payment ${paymentId} already exists`);
       if (!TENDERS.includes(d.tender)) throw fail("E_BAD_DATA", `unknown tender ${d.tender}`);
-      assertCentimes(d.amountCentimes, "amountCentimes");
+      coded(() => assertCentimes(d.amountCentimes, "amountCentimes"));
       if (d.amountCentimes === 0) throw fail("E_BAD_DATA", "payment amount cannot be 0");
       if (isRefund(s) ? d.amountCentimes > 0 : d.amountCentimes < 0) throw fail("E_REFUND_SIGN", "payment sign does not match the order");
       const bankId = requireString(d.bankId, "bankId");
       let tendered = null;
       let change = 0;
       if (d.tender === "cash" && d.tenderedCentimes != null) {
-        assertCentimes(d.tenderedCentimes, "tenderedCentimes");
+        coded(() => assertCentimes(d.tenderedCentimes, "tenderedCentimes"));
         if (!isRefund(s)) {
           if (d.tenderedCentimes < d.amountCentimes) throw fail("E_TENDERED_LOW", "cash tendered is below the amount");
           tendered = d.tenderedCentimes;

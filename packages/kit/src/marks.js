@@ -12,6 +12,9 @@
 import { assertCentimes, assertRateBp } from "./money.js";
 import { EventError, compareEvents, typeInfo } from "./events.js";
 import { parseHhMm } from "./timezone.js";
+import permissionDefaults from "../../../data/permissions.json" with { type: "json" };
+
+const PERMISSION_ACTIONS = /** @type {Record<string, unknown>} */ (/** @type {any} */ (permissionDefaults).actions);
 
 /** @typedef {import("./events.js").EventEnvelope} EventEnvelope */
 /** @typedef {"cafe" | "resto"} Product */
@@ -78,6 +81,131 @@ function str(v, what) {
   return v;
 }
 
+/** @param {unknown} v @param {string} what */
+function price(v, what) {
+  assertCentimes(v, what);
+  if (/** @type {number} */ (v) < 0) throw bad(`${what} cannot be negative`);
+}
+
+/** @param {unknown} v */
+function isDate(v) {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  return new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v;
+}
+
+/** @param {readonly unknown[]} values @returns {(v: unknown) => void} */
+const oneOf = (values) => (v) => {
+  if (!values.includes(v)) throw bad(`value must be one of ${values.join(", ")}`);
+};
+/** @param {number} min @param {number} max @returns {(v: unknown) => void} */
+const intIn = (min, max) => (v) => {
+  if (!Number.isSafeInteger(v) || /** @type {number} */ (v) < min || /** @type {number} */ (v) > max) throw bad(`value must be an integer ${min}..${max}`);
+};
+/** @param {unknown} v */
+const lines = (v) => {
+  if (!Array.isArray(v) || v.length > 4 || v.some((l) => typeof l !== "string" || l.length > 64)) throw bad("up to 4 lines of text");
+};
+/** @param {unknown} v */
+const hhmm = (v) => void parseHhMm(String(v));
+/** @param {unknown} v */
+const bool = (v) => {
+  if (typeof v !== "boolean") throw bad("value must be true or false");
+};
+/** @param {unknown} v */
+const object = (v) => {
+  if (!v || typeof v !== "object" || Array.isArray(v)) throw bad("value must be an object");
+};
+/** @param {(v: unknown) => void} f a check that also accepts null */
+const nullOr = (f) => (/** @type {unknown} */ v) => (v === null ? undefined : f(v));
+const DISCOUNT_ROLES = ["owner", "manager", "cashier", "waiter"];
+
+/**
+ * One check per settings path, from the "Values" column of docs/03 §8. A value outside it is refused (E_BAD_DATA):
+ * a malformed approval setting must never switch an approval off.
+ * @type {Record<string, (v: unknown) => void>}
+ */
+const SETTING_CHECKS = {
+  "service.mode": oneOf(["counter", "waiter", "both"]),
+  "service.banking": oneOf(["till", "per_waiter", "both"]),
+  "service.zones": (v) => {
+    if (!Array.isArray(v) || v.some((z) => typeof z !== "string" || !z)) throw bad("a list of zones");
+  },
+  "receipt.languages": oneOf(["fr", "ar", "fr+ar"]),
+  "receipt.header": lines,
+  "receipt.footer": lines,
+  "receipt.width": oneOf([32, 48]),
+  "receipt.lineLanguage": oneOf(["fr", "ar"]),
+  "receipt.printOnClose": oneOf(["always", "ask", "never"]),
+  "printing.routes": (v) => {
+    if (!Array.isArray(v) || v.some((r) => !r || typeof r.station !== "string")) throw bad("a list of {category, station, printerId}");
+  },
+  "printing.barTicketOnPayment": bool,
+  "taxes.defaultVatBp": intIn(0, 2000),
+  "taxes.byMode": (v) => {
+    object(v);
+    for (const [k, r] of Object.entries(/** @type {object} */ (v))) {
+      if (k !== "takeaway" && k !== "delivery") throw bad(`unknown mode ${k}`);
+      nullOr(intIn(0, 2000))(r);
+    }
+  },
+  "taxes.debitDeBoissons": (v) => {
+    object(v);
+    const x = /** @type {any} */ (v);
+    bool(x.enabled);
+    nullOr(intIn(0, 10000))(x.rateBp);
+  },
+  "approvals.discountCapBp": (v) => {
+    object(v);
+    for (const [role, cap] of Object.entries(/** @type {object} */ (v))) {
+      if (!DISCOUNT_ROLES.includes(role)) throw bad(`unknown role ${role}`);
+      intIn(0, 10000)(cap);
+    }
+  },
+  "approvals.freeReprints": intIn(0, 3),
+  "approvals.approvers": nullOr((v) => {
+    if (!Array.isArray(v) || v.some((id) => typeof id !== "string" || !id.startsWith("stf_"))) throw bad("a list of stf_… ids");
+  }),
+  tips: (v) => {
+    object(v);
+    bool(/** @type {any} */ (v).enabled);
+    oneOf(["equal", "hours", "role"])(/** @type {any} */ (v).rule);
+  },
+  "reports.eveningTime": hhmm,
+  "reports.channels": (v) => {
+    if (!Array.isArray(v) || v.some((c) => c !== "whatsapp" && c !== "email")) throw bad("whatsapp and/or email");
+  },
+  "reports.thresholds": (v) => {
+    object(v);
+    const x = /** @type {any} */ (v);
+    intIn(0, 100_000_000)(x.cashGapCentimes);
+    object(x.dose);
+    intIn(0, 10_000)(x.dose.minDoses);
+    intIn(0, 10_000)(x.dose.relativeBp);
+  },
+  "hours.businessDayCutoff": hhmm,
+  "hours.ramadan": nullOr(object),
+  "languages.default": oneOf(["fr", "ar"]),
+  "ordering.inboxDeviceId": nullOr((v) => {
+    if (typeof v !== "string" || !v.startsWith("dev_")) throw bad("a dev_… id");
+  }),
+  "deposits.vatOnReceipt": nullOr(bool),
+  "deposits.keptVatBp": nullOr(intIn(0, 2000)),
+  "lock.tillSeconds": intIn(15, 3600),
+  "lock.phoneSeconds": intIn(15, 3600),
+  permissions: (v) => {
+    object(v);
+    for (const [action, o] of Object.entries(/** @type {object} */ (v))) {
+      if (!Object.hasOwn(PERMISSION_ACTIONS, action)) throw bad(`unknown action ${action}`);
+      object(o);
+      const x = /** @type {any} */ (o);
+      if (x.roles !== undefined && (!Array.isArray(x.roles) || x.roles.some((/** @type {unknown} */ r) => !ROLES.includes(/** @type {string} */ (r))))) throw bad("roles must be known roles");
+      if (x.approval !== undefined) oneOf(["always", "if_sent", "after_2_min", "never"])(x.approval);
+      if (x.capBp !== undefined) SETTING_CHECKS["approvals.discountCapBp"](x.capBp);
+      if (x.freeCount !== undefined) intIn(0, 3)(x.freeCount);
+    }
+  },
+};
+
 /** @param {unknown} n */
 function name(n) {
   const x = /** @type {any} */ (n);
@@ -105,10 +233,9 @@ function checkMarkData(ev) {
   switch (ev.type) {
     case "settings.set": {
       const path = str(d.path, "path");
-      if (!(path in settingsDefaults("cafe"))) throw bad(`unknown setting ${path}`);
+      if (!Object.hasOwn(SETTING_CHECKS, path)) throw bad(`unknown setting ${path}`);
       if (!("value" in d)) throw bad("value is required");
-      if (path === "hours.businessDayCutoff" || path === "reports.eveningTime") parseHhMm(String(d.value));
-      if (path === "taxes.defaultVatBp") assertRateBp(d.value);
+      SETTING_CHECKS[path](d.value);
       break;
     }
     case "kitchen.status":
@@ -122,6 +249,7 @@ function checkMarkData(ev) {
     case "staff.set":
       str(d.displayName, "displayName");
       if (!ROLES.includes(d.role)) throw bad(`role must be ${ROLES.join(", ")}`);
+      for (const k of ["active", "canApprove"]) if (d[k] !== undefined && typeof d[k] !== "boolean") throw bad(`${k} must be true or false`);
       break;
     case "staff.pin_set":
       str(d.pinHash, "pinHash");
@@ -140,10 +268,23 @@ function checkMarkData(ev) {
         if (d.priceCentimes < 0) throw bad("price cannot be negative");
       }
       if (d.vatBp !== null && d.vatBp !== undefined) assertRateBp(d.vatBp);
+      if (d.available !== undefined && typeof d.available !== "boolean") throw bad("available must be true or false");
+      for (const v of Object.values(d.priceByZone ?? {})) price(v, "priceByZone");
       for (const x of d.deductions ?? []) {
         str(x.itemId, "deduction itemId");
         if (!Number.isSafeInteger(x.qtyMilli) || x.qtyMilli < 0) throw bad("deduction qtyMilli must be ≥ 0");
       }
+      break;
+    case "catalog.modifier_group_set":
+      name(d.name);
+      for (const o of d.options ?? []) price(o.priceCentimes, "option priceCentimes");
+      break;
+    case "catalog.set_menu_set":
+      if (d.priceCentimes !== null && d.priceCentimes !== undefined) price(d.priceCentimes, "priceCentimes");
+      break;
+    case "stock.item_set":
+      str(d.name, "name");
+      if (d.costCentimes !== null && d.costCentimes !== undefined) price(d.costCentimes, "costCentimes");
       break;
     case "catalog.product_availability":
       if (typeof d.available !== "boolean") throw bad("available must be true or false");
@@ -157,7 +298,7 @@ function checkMarkData(ev) {
       if (!Number.isSafeInteger(d.effectiveFrom)) throw bad("effectiveFrom must be Unix ms");
       break;
     case "day.closed":
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.businessDate))) throw bad("businessDate must be YYYY-MM-DD");
+      if (!isDate(d.businessDate)) throw bad("businessDate must be a real YYYY-MM-DD date");
       break;
     case "deadletter.resolved":
       str(d.how, "how");
@@ -253,40 +394,41 @@ function derive(product, winners) {
     const d = ev.data;
     switch (ev.type) {
       case "settings.set":
-        s.settings[d.path] = structuredClone(d.value);
+        // only known paths (a stored event from an older version may carry one that no longer exists)
+        if (Object.hasOwn(SETTING_CHECKS, d.path)) s.settings[d.path] = structuredClone(d.value);
         break;
       case "catalog.category_set":
-        s.catalog.categories[ev.entity] = { id: ev.entity, ...d };
+        s.catalog.categories[ev.entity] = { ...d, id: ev.entity };
         break;
       case "catalog.product_set":
-        s.catalog.products[ev.entity] = { id: ev.entity, ...d };
+        s.catalog.products[ev.entity] = { ...d, id: ev.entity };
         break;
       case "catalog.product_availability":
         availability[ev.entity] = ev;
         break;
       case "catalog.modifier_group_set":
-        s.catalog.modifierGroups[ev.entity] = { id: ev.entity, ...d };
+        s.catalog.modifierGroups[ev.entity] = { ...d, id: ev.entity };
         break;
       case "catalog.recipe_set":
-        s.catalog.recipes[ev.entity] = { productId: ev.entity, ...d };
+        s.catalog.recipes[ev.entity] = { ...d, productId: ev.entity };
         break;
       case "catalog.set_menu_set":
-        s.catalog.setMenus[ev.entity] = { productId: ev.entity, ...d };
+        s.catalog.setMenus[ev.entity] = { ...d, productId: ev.entity };
         break;
       case "stock.item_set":
-        s.catalog.stockItems[ev.entity] = { id: ev.entity, ...d };
+        s.catalog.stockItems[ev.entity] = { ...d, id: ev.entity };
         break;
       case "staff.set":
-        s.staff.profiles[ev.entity] = { id: ev.entity, ...d };
+        s.staff.profiles[ev.entity] = { ...d, id: ev.entity };
         break;
       case "staff.pin_set":
         s.staff.pins[ev.entity] = { pinHash: d.pinHash, pinSalt: d.pinSalt, iterations: d.iterations, at: ev.at };
         break;
       case "zone.set":
-        s.layout.zones[ev.entity] = { id: ev.entity, ...d };
+        s.layout.zones[ev.entity] = { ...d, id: ev.entity };
         break;
       case "table.set":
-        s.layout.tables[ev.entity] = { id: ev.entity, ...d };
+        s.layout.tables[ev.entity] = { ...d, id: ev.entity };
         break;
       case "table.mark":
         s.tableMarks[ev.entity] = { state: d.state, at: ev.at };
@@ -301,7 +443,7 @@ function derive(product, winners) {
         };
         break;
       case "device.set":
-        s.devices[ev.entity] = { id: ev.entity, ...d };
+        s.devices[ev.entity] = { ...d, id: ev.entity };
         break;
       case "day.closed":
         s.daysClosed[d.businessDate] = { at: ev.at, staff: ev.staff };
@@ -326,6 +468,6 @@ function derive(product, winners) {
  * @param {string} path
  */
 export function setting(state, path) {
-  if (!(path in state.settings)) throw new RangeError(`unknown setting ${path}`);
+  if (!Object.hasOwn(state.settings, path)) throw new RangeError(`unknown setting ${path}`);
   return state.settings[path];
 }

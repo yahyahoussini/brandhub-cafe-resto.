@@ -22,6 +22,16 @@ test("receipts: a block that does not follow the used one starts at its own firs
   assert.equal(takeNumber(r.numbering).number, 1002);
 });
 
+test("receipts: a block received again after it was used up never hands out its numbers twice", () => {
+  let t = newTillNumbering("C1");
+  t = addBlock(t, { blockId: "blk_1", start: 1, end: 3, prefix: "C1" });
+  for (let i = 0; i < 3; i++) t = takeNumber(t).numbering;
+  t = addBlock(t, { blockId: "blk_1", start: 1, end: 3, prefix: "C1" });
+  assert.throws(() => takeNumber(t), /no receipt number left/);
+  t = addBlock(t, { blockId: "blk_2", start: 4, end: 6, prefix: "C1" });
+  assert.equal(takeNumber(t).receiptNo, "C1-000004", "a following block continues");
+});
+
 test("receipts: with no number left the till says so instead of crashing", () => {
   let t = newTillNumbering("C1");
   t = addBlock(t, { blockId: "blk_1", start: 1, end: 1, prefix: "C1" });
@@ -69,6 +79,19 @@ test("order: malformed amounts and rates are coded E_BAD_DATA (docs/03 §9)", ()
   );
 });
 
+test("order: a programming error (no state, stale state) is not disguised as a refused event", () => {
+  assert.throws(() => applyOrderEvent(/** @type {any} */ ({ id: "ord_x" }), { ...opened, id: "e2", type: "order.note_set", seq: 2, data: {} }), (e) => !(e instanceof OrderRuleError));
+});
+
+test("order: an amount too large for exact arithmetic is E_BAD_DATA", () => {
+  const s = applyOrderEvent(null, opened);
+  const line = { lineId: "lin_1", productId: "prd_1", name: { fr: "x", ar: "x" }, unitCentimes: 9e15, qtyMilli: 1_000_000, vatBp: 1000 };
+  assert.throws(
+    () => applyOrderEvent(s, { ...base, id: "e2", type: "line.added", entity: "ord_x", seq: 2, data: line }),
+    (e) => e instanceof OrderRuleError && e.code === "E_BAD_DATA",
+  );
+});
+
 test("bank: a missing float is coded E_BAD_DATA (docs/03 §9)", () => {
   assert.throws(
     () => applyBankEvent(null, { ...base, id: "b1", type: "bank.opened", entity: "bnk_x", seq: 1, data: { kind: "till", holder: "stf_a" } }),
@@ -81,6 +104,10 @@ test("journal: relayedBy, clockSkew and v are covered by the hash (docs/03 §4, 
   const hash = await chainHash(GENESIS, ev);
   const stored = [{ ...ev, prevHash: GENESIS, hash }];
   assert.equal((await verifyChain(stored)).ok, true);
+  // a row read back from the store (relayed_by NULL, clock_skew 0) verifies against an event hashed without them
+  const plain = { ...ev, relayedBy: undefined, clockSkew: undefined };
+  const h2 = await chainHash(GENESIS, plain);
+  assert.equal((await verifyChain([{ ...plain, relayedBy: null, clockSkew: 0, prevHash: GENESIS, hash: h2 }])).ok, true);
   for (const [k, v] of /** @type {const} */ ([["relayedBy", "dev_other"], ["clockSkew", 1], ["v", 2]])) {
     assert.deepEqual(await verifyChain([{ ...stored[0], [k]: v }]), { ok: false, brokenAtPos: 1, reason: "hash_mismatch" }, k);
   }

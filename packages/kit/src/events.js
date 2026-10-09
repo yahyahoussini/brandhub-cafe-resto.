@@ -12,6 +12,8 @@
  */
 
 import { isEntityId, isUuidv7 } from "./ids.js";
+import { assertCentimes } from "./money.js";
+import { TENDERS } from "./order.js";
 
 export class EventError extends Error {
   /**
@@ -34,7 +36,10 @@ export const MAX_DATA_BYTES = 16 * 1024;
 export const DEVICE_KINDS = Object.freeze(/** @type {const} */ (["till", "phone", "screen", "station", "office", "cloud"]));
 /** @typedef {(typeof DEVICE_KINDS)[number]} DeviceKind */
 /** @typedef {"sequenced" | "movement" | "mark"} EventKind */
-/** @typedef {{ prefixes: readonly string[], kind: EventKind, writers: readonly DeviceKind[] }} TypeInfo */
+/**
+ * @typedef {{ prefixes: readonly string[], kind: EventKind, writers: readonly DeviceKind[],
+ *   writersByPrefix?: Readonly<Record<string, readonly DeviceKind[]>> }} TypeInfo
+ */
 
 const SALE = /** @type {const} */ (["till", "phone"]);
 const FLOOR = /** @type {const} */ (["till", "phone", "office"]);
@@ -43,10 +48,16 @@ const FLOOR = /** @type {const} */ (["till", "phone", "office"]);
  * @param {string | readonly string[]} prefixes
  * @param {EventKind} kind
  * @param {readonly DeviceKind[]} writers
+ * @param {Record<string, readonly DeviceKind[]>} [writersByPrefix] when the writer depends on the entity
  * @returns {TypeInfo}
  */
-const def = (prefixes, kind, writers) =>
-  Object.freeze({ prefixes: Object.freeze(typeof prefixes === "string" ? [prefixes] : [...prefixes]), kind, writers });
+const def = (prefixes, kind, writers, writersByPrefix = undefined) =>
+  Object.freeze({
+    prefixes: Object.freeze(typeof prefixes === "string" ? [prefixes] : [...prefixes]),
+    kind,
+    writers,
+    ...(writersByPrefix ? { writersByPrefix: Object.freeze(writersByPrefix) } : {}),
+  });
 
 /**
  * docs/03 §5. `prefixes` is the entity's id prefix ("uuid" for `deadletter.resolved`, whose entity is the rejected
@@ -102,7 +113,8 @@ export const EVENT_TYPES = Object.freeze({
   "receipts.block_reserved": def("blk", "movement", ["cloud"]),
   "receipts.block_abandoned": def("blk", "movement", ["cloud"]),
   "invoice.issued": def("inv", "movement", ["cloud"]),
-  "z.closed": def(["bnk", "tnt"], "movement", ["till", "phone", "cloud"]),
+  // a bank's Z by the device that holds the bank; the day Z by the cloud only (it knows the open dead letters)
+  "z.closed": def(["bnk", "tnt"], "movement", ["till", "phone", "cloud"], { bnk: ["till", "phone"], tnt: ["cloud"] }),
   // Marks (marks.js)
   "catalog.category_set": def("cat", "mark", ["office"]),
   "catalog.product_set": def("prd", "mark", ["office"]),
@@ -146,7 +158,7 @@ function fail(code, message) {
  * @returns {TypeInfo}
  */
 export function typeInfo(type) {
-  const info = EVENT_TYPES[type];
+  const info = typeof type === "string" && Object.hasOwn(EVENT_TYPES, type) ? EVENT_TYPES[type] : undefined;
   if (!info) throw fail("E_BAD_EVENT", `unknown event type ${type}`);
   return info;
 }
@@ -213,12 +225,105 @@ export function canWrite(type, kind) {
  */
 export function assertCanWrite(ev, kind) {
   if (!DEVICE_KINDS.includes(kind)) throw fail("E_BAD_DATA", `unknown device kind ${kind}`);
-  if (!canWrite(ev.type, kind)) throw fail("E_FORBIDDEN_TYPE", `a ${kind} cannot write ${ev.type}`);
+  const info = typeInfo(ev.type);
+  const writers = info.writersByPrefix?.[ev.entity.slice(0, ev.entity.indexOf("_"))] ?? info.writers;
+  if (!writers.includes(kind)) throw fail("E_FORBIDDEN_TYPE", `a ${kind} cannot write ${ev.type} on ${ev.entity}`);
   if ((kind === "office" || kind === "cloud") !== (ev.device === CLOUD_DEVICE)) {
     throw fail("E_FORBIDDEN_TYPE", `${kind} events are written as ${kind === "office" || kind === "cloud" ? CLOUD_DEVICE : "the device itself"}`);
   }
   if (kind === "office" && !isEntityId(ev.staff, "own")) throw fail("E_FORBIDDEN_TYPE", "office events carry the owner account (own_…)");
   if (kind === "cloud" && ev.staff !== null) throw fail("E_FORBIDDEN_TYPE", "cloud events have no staff");
+  if (kind !== "office" && kind !== "cloud" && isEntityId(ev.staff, "own")) {
+    throw fail("E_FORBIDDEN_TYPE", "a paired device writes with the PIN session's stf_…, not an owner account");
+  }
+}
+
+/** @param {string} message */
+function badData(message) {
+  return fail("E_BAD_DATA", message);
+}
+
+/** @param {unknown} v @param {string} what @param {{ min?: number, nonZero?: boolean }} [o] */
+function int(v, what, o = {}) {
+  if (!Number.isSafeInteger(v)) throw badData(`${what} must be an integer`);
+  if (o.min !== undefined && /** @type {number} */ (v) < o.min) throw badData(`${what} must be ≥ ${o.min}`);
+  if (o.nonZero && v === 0) throw badData(`${what} cannot be 0`);
+  return /** @type {number} */ (v);
+}
+
+/** @param {unknown} v @param {string} what */
+function money(v, what) {
+  try {
+    assertCentimes(v, what);
+  } catch (e) {
+    throw badData(/** @type {Error} */ (e).message);
+  }
+  return /** @type {number} */ (v);
+}
+
+/** @param {unknown} v */
+function isDate(v) {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  return new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v;
+}
+
+/**
+ * Validates the payload of a movement (docs/03 §5 movements table; docs/04 §2 "movements and marks: schema only").
+ * Throws an EventError coded E_BAD_DATA. Events are never edited (D20): a bad movement must be refused before it is
+ * stored.
+ * @param {EventEnvelope} ev
+ */
+export function validateMovement(ev) {
+  if (typeInfo(ev.type).kind !== "movement") throw fail("E_BAD_EVENT", `${ev.type} is not a movement`);
+  const d = ev.data;
+  switch (ev.type) {
+    case "machine.reading":
+      int(d.reading, "reading", { min: 0 });
+      if (!["open", "close", "check"].includes(d.kind)) throw badData("kind must be open, close or check");
+      if (!isDate(d.businessDate)) throw badData("businessDate must be a real YYYY-MM-DD date");
+      break;
+    case "machine.off_till":
+      int(d.doses, "doses", { min: 1 });
+      if (!["test", "staff", "offered", "purge"].includes(d.reason)) throw badData("reason must be test, staff, offered or purge");
+      break;
+    case "stock.counted":
+    case "stock.received":
+    case "stock.wasted":
+      int(d.qtyMilli, "qtyMilli", { min: 0 });
+      if (ev.type === "stock.received" && d.costCentimes != null && money(d.costCentimes, "costCentimes") < 0) throw badData("cost cannot be negative");
+      if (ev.type === "stock.wasted" && (typeof d.reason !== "string" || !d.reason)) throw badData("a reason is required");
+      break;
+    case "stock.adjusted":
+      int(d.qtyMilli, "qtyMilli", { nonZero: true });
+      if (typeof d.reason !== "string" || !d.reason) throw badData("a reason is required");
+      break;
+    case "kredi.repaid":
+      money(d.amountCentimes, "amountCentimes");
+      if (d.amountCentimes === 0) throw badData("amount cannot be 0");
+      if (!TENDERS.includes(d.tender) || d.tender === "credit") throw badData("tender must be a real tender, not credit");
+      if (d.tender === "cash" && !isEntityId(d.bankId, "bnk")) throw badData("a cash repayment names the open bank (bankId)");
+      if (d.amountCentimes < 0 && !d.approvedBy) throw badData("money given back needs approvedBy");
+      break;
+    case "staff.clock":
+      if (d.kind !== "in" && d.kind !== "out") throw badData("kind must be in or out");
+      break;
+    case "receipts.block_reserved":
+      if (!isEntityId(d.deviceId, "dev")) throw badData("deviceId must be dev_…");
+      if (typeof d.prefix !== "string" || !/^T?[CS]\d{1,3}$/.test(d.prefix)) throw badData("prefix must be C1, S1…");
+      if (int(d.end, "end", { min: 1 }) < int(d.start, "start", { min: 1 })) throw badData("end must be ≥ start");
+      break;
+    case "receipts.block_abandoned":
+      int(d.from, "from", { min: 1 });
+      break;
+    case "z.closed":
+      if (!isDate(d.businessDate)) throw badData("businessDate must be a real YYYY-MM-DD date");
+      if (!d.totals || typeof d.totals !== "object") throw badData("totals are required");
+      if (typeof d.hash !== "string" || !/^[0-9a-f]{64}$/.test(d.hash)) throw badData("hash must be a SHA-256");
+      break;
+    default:
+      break;
+  }
+  return ev;
 }
 
 /** @param {string} type */

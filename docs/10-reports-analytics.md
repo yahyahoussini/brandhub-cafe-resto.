@@ -16,7 +16,7 @@ Every figure is computed in the TenantStore (and for today on the Station) from 
 | Openings without sale | `bank.no_sale` events |
 | Reprints | `bank.reprint` events |
 | Cash gap | `cashVariance(bank, cash)` per bank (`bank.js`), where `cash` is the bank's cash payments and its cash `kredi.repaid` (repayments, deposits, refunds) |
-| Dose gap | `doseVariance` between the open and close readings (`bank.js`); money value at the day's average dose price = coffee revenue ÷ coffee doses sold |
+| Dose gap | `doseVariance` between the open and close readings (`bank.js`); money value at the day's average dose price = coffee revenue ÷ coffee doses sold. With several machines, every machine needs both readings and none may have a counter reset, otherwise the gap is "missing reading" or "counter reset", never a guess |
 | Stock gap | last count − (previous count + received − wasted + adjusted − sold by deductions) (`stock.js`) |
 | Food cost % (Resto) | Σ recipe cost of dishes sold ÷ net HT of those dishes |
 | Kitchen time (Resto) | from `lines.fired` (or `lines.sent`) to `kitchen.status = ready`, median per station |
@@ -26,7 +26,9 @@ Header (venue, legal line, business day, bank holder, device, opened/closed at) 
 last numbers) · revenue TTC, VAT by rate, net HT · tenders (cash, card with count of slips, Maroc Pay, transfer, voucher,
 credit) · float, cash in, cash out (with reasons), expected, counted, gap · voids, discounts, openings without sale,
 reprints · dose counter (Café). The day Z adds banks side by side and the dead letters still open. A bank's Z covers the
-payments made into it (`payment.bankId`); receipt numbers are listed per device series. Printed at closing and stored as
+payments made into it (`payment.bankId`): an order paid into two banks shares its revenue and VAT between them in
+proportion to the amounts paid (largest remainder), and cash Kredi repayments have their own line, so float + cash sales
++ Kredi cash + cash in − cash out = expected. Receipt numbers are listed per device series. Printed at closing and stored as
 a `z.closed` record with its hash (docs/03 §5): the Z shown later is that record, never a recomputation.
 
 ## 3. Evening report (`evening_report`, D35)

@@ -15,7 +15,7 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
 | # | Prompt | State | Date | Notes |
 |---|---|---|---|---|
 | 00 | Orientation | done | 4 Oct 2026 | Node v22.22.0, `npm test` 75/75. 15 contradictions or gaps listed below (not applied). Gate 1 not run, pilot 1 not chosen. |
-| 01 | Repository scaffold | done | 4 Oct 2026 | Node v22.22.0, npm 10.9.4, TypeScript 5.9.3, ESLint 9.39.5, Prettier 3.9.9, Playwright 1.56.1. `npm ci && npm run gate` passes, 85 tests (kit 75 + `bh/logical-css` 10). Details below. |
+| 01 | Repository scaffold | done | 4 Oct 2026 | Node v22.22.0, npm 10.9.4, TypeScript 5.9.3, ESLint 9.39.5, Prettier 3.9.9, Playwright 1.56.1. `npm ci && npm run gate` passes, 94 tests (kit 75 + `bh/logical-css` 19). Details below. |
 
 ## Current state
 - Kit: 75 unit tests passing (money, ids, order with moves and customers, bank with the bank guard, receipts, escpos,
@@ -25,28 +25,43 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
   `@brandhub/tools`.
 - Tooling (prompt 01):
   - `npm run typecheck` (`tools/scripts/typecheck.mjs`) runs `tsc -p` on the root and every workspace that has source;
-    empty workspaces print "skipped (no source yet)". Web apps and `kit-web` use `moduleResolution: bundler` and the DOM lib.
-  - The kit's tsconfig checks `src/` only (with the DOM lib for `CryptoKey`). Its tests have no `// @ts-check` and are
-    not strict-clean (30 errors); they stay untouched as provided.
-  - `npm run lint`: ESLint 9 flat config with `@eslint/js` recommended, `bh/logical-css` (`tools/eslint/logical-css.js`,
-    tested), café↔resto import ban (relative path or package name), no relative imports into `packages/`, no
-    `parseFloat`/`toFixed` in `apps/**`, `no-console` (warn/error allowed in Station and Workers; console allowed in
-    `tools/**` and tests).
+    empty workspaces print "skipped (no source yet)". Libraries per area:
+    - web apps and `kit-web`: `moduleResolution: bundler`, DOM lib;
+    - Workers and `kit-worker`: `webworker` lib (prompt 04 adds the Cloudflare types);
+    - Station and tools: DOM lib, for the kit's `CryptoKey`;
+    - kit `src/`: DOM lib and no Node types, so a Node-only API in the pure rules fails.
+    The root tsconfig checks `e2e/` and the build configs (`*.config.js` of each app), which run on Node.
+  - The kit's tests have no `// @ts-check` and are not strict-clean (30 errors); they stay untouched as provided and
+    are not type-checked.
+  - `npm run lint`: ESLint 9 flat config with `@eslint/js` recommended and `ecmaVersion` 2025 (JSON imports need
+    `with { type: "json" }` under NodeNext). Rules:
+    - `bh/logical-css` (`tools/eslint/logical-css.js`, 19 tests): follows constants, variant maps, ternaries and
+      `.filter(Boolean).join(" ")` chains in the file; catches Tailwind 4's trailing `!` and `scroll-ml-`.
+    - café↔resto import ban (any relative depth, folder, package name, `export … from` and dynamic `import()`);
+      the Station never imports an app; no relative imports into `packages/`.
+    - no `parseFloat`/`toFixed` in `apps/**`.
+    - `no-console`: warn/error allowed in Station and Workers; console allowed in `tools/**` and tests.
+    - kit `src/` only sees globals common to Node and browsers.
   - Three rule options keep the provided kit lint-clean without editing it: `no-irregular-whitespace` skips regular
     expressions, `no-unused-vars` ignores rest siblings, and console is allowed in tests.
   - ESLint 9 instead of 10: ESLint 10 needs Node ≥ 22.13 and `engines` allows 22.12.
   - Prettier (width 120) formats the new code only; it ignores `*.md`, `docs/`, `prompts/`, `data/` and `packages/kit/`,
     so the pack keeps its layout. `npm run format` and `npm run format:check` are available; they are not part of the gate.
-  - `npm test` = `node --test` over `packages/*/test`, `apps/*/*/test`, `apps/station/test` and `tools/test`.
-  - `npm run e2e` = Playwright, 4 projects (`fr-360`, `fr-1280`, `ar-360`, `ar-1280`), passes with no tests.
+  - `npm test` = `node --test` over `*.test.{js,mjs,cjs}` in `packages/*/test`, `apps/*/*/test`, `apps/station/test`
+    and `tools/test`.
+  - `npm run e2e` = Playwright, 4 projects (`fr-360`, `fr-1280`, `ar-360`, `ar-1280`), passes with no tests. One
+    language is selected with `--project='fr*'` or `--project='ar*'`.
   - Playwright is pinned to 1.56.1 because that version uses the Chromium build preinstalled in the cloud sandbox
     (`npx playwright install` is disabled there). On Yahya's computer, run `npx playwright install chromium` once.
   - `npm run i18n` and `npm run budgets` are stubs until prompts 02 and 10.
+  - `.gitignore` keeps every local secret file out (`.dev.vars*`, `.env*`, except `*.example`).
+  - Before commit, three review agents checked the scaffold and a second pass tried to disprove each finding. The confirmed
+    findings are fixed in `fix(tooling): close lint and type-check gaps found in review`.
 - docs/02 §2 workspace line aligned with prompt 01 (`apps/cafe/*`, `apps/resto/*`, `apps/station`, `tools`).
 - Repository: the pack is commit `5a6674a` in `yahyahoussini/brandhub-cafe-resto`. The build runs on
   `yahyahoussini/brandhub-cafe-resto.` (trailing dot), branch `claude/gallant-brown-cq49fc`. Both repositories are
-  **public**; README §Before you start and docs/14 task 3 ask for a private one. Yahya to choose one repository and make it private
-  before prompt 01.
+  **public**; README §Before you start and docs/14 task 3 ask for a private one. Yahya to choose one repository and make it
+  private (still open after prompt 01).
 
 ## Orientation findings (prompt 00) — not applied
 Each one was found by one reader and checked by a second agent. Items 1–3 were reproduced with node. Nothing is changed until Yahya

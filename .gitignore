@@ -1,7 +1,11 @@
 node_modules/
 dist/
 .wrangler/
-.dev.vars
+# Local secrets (Wrangler reads .dev.vars, .dev.vars.<env> and .env files); examples are committed.
+.dev.vars*
+.env*
+!.dev.vars.example
+!.env.example
 *.sqlite*
 apps/station/out/
 test-results/

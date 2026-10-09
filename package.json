@@ -14,7 +14,7 @@
     "tools"
   ],
   "scripts": {
-    "test": "node --test \"packages/*/test/**/*.test.js\" \"apps/*/*/test/**/*.test.js\" \"apps/station/test/**/*.test.js\" \"tools/test/**/*.test.js\"",
+    "test": "node --test \"packages/*/test/**/*.test.{js,mjs,cjs}\" \"apps/*/*/test/**/*.test.{js,mjs,cjs}\" \"apps/station/test/**/*.test.{js,mjs,cjs}\" \"tools/test/**/*.test.{js,mjs,cjs}\"",
     "typecheck": "node tools/scripts/typecheck.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",

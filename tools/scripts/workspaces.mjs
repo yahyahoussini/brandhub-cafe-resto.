@@ -45,7 +45,8 @@ export function jsFiles(dir) {
     if (SKIP.has(entry.name)) continue;
     const path = join(dir, entry.name);
     if (entry.isDirectory()) found.push(...jsFiles(path));
-    else if (/\.(js|jsx|mjs|cjs)$/.test(entry.name)) found.push(path);
+    // Build configs (vite.config.js, playwright.config.js) are checked from the root tsconfig, not as workspace source.
+    else if (/\.(js|jsx|mjs|cjs)$/.test(entry.name) && !/\.config\.m?js$/.test(entry.name)) found.push(path);
   }
   return found;
 }

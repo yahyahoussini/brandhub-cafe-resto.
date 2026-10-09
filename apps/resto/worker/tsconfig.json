@@ -1,8 +1,9 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
+    "lib": ["es2023", "webworker"],
     "types": ["node"]
   },
-  "include": ["**/*.js", "**/*.jsx", "**/*.mjs"],
-  "exclude": ["node_modules", "dist", "out"]
+  "include": ["**/*.js", "**/*.jsx", "**/*.mjs", "**/*.cjs"],
+  "exclude": ["node_modules", "dist", "out", "**/*.config.js", "**/*.config.mjs"]
 }

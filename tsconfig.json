@@ -1,7 +1,16 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "lib": ["es2023", "dom"],
     "types": ["node"]
   },
-  "files": ["eslint.config.js", "playwright.config.js"]
+  "include": [
+    "*.config.js",
+    "e2e/**/*.js",
+    "apps/*/web/*.config.js",
+    "apps/*/web/*.config.mjs",
+    "apps/*/worker/*.config.js",
+    "packages/kit-web/*.config.js",
+    "apps/station/*.config.js"
+  ]
 }

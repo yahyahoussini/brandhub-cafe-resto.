@@ -3,5 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "BrandHub Resto Worker and RestoStore Durable Object (resto.brandhub.ma)."
+  "description": "BrandHub Resto Worker and RestoStore Durable Object (resto.brandhub.ma).",
+  "dependencies": {
+    "@brandhub/kit-worker": "0.0.0"
+  }
 }

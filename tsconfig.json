@@ -11,6 +11,7 @@
     "apps/*/web/*.config.mjs",
     "apps/*/worker/*.config.js",
     "packages/kit-web/*.config.js",
+    "packages/kit-worker/*.config.js",
     "apps/station/*.config.js"
   ]
 }

@@ -236,4 +236,7 @@ The kit throws `OrderRuleError` / `BankRuleError` / `EventError` with a `code` (
 `E_LINE_SENT`, `E_LINE_VOIDED`, `E_NOT_HELD`, `E_DUP_LINE`, `E_DUP_PAYMENT`, `E_PAYMENT_UNKNOWN`, `E_PAYMENT_VOIDED`,
 `E_APPROVAL_REQUIRED`, `E_OVERPAID`, `E_TENDERED_LOW`, `E_NOT_PAID`, `E_HAS_PAYMENTS`, `E_EMPTY`, `E_REFUND_SIGN`,
 `E_LINE_MOVED`, `E_BANK_UNKNOWN`, `E_BANK_CLOSED`; sync-level codes (docs/04): `E_SEQ_BLOCKED`, `E_DEVICE_REVOKED`,
-`E_FORBIDDEN_TYPE`, `E_TOO_LARGE`, `E_UNKNOWN_STAFF`, `E_MOVE_PAIR`, `E_REFUND_EXCEEDS`.
+`E_FORBIDDEN_TYPE`, `E_TOO_LARGE`, `E_UNKNOWN_STAFF`, `E_MOVE_PAIR`, `E_REFUND_EXCEEDS`; HTTP-level codes of the
+product Workers' `/api/*` (prompt 04, body `{ "code": "E_…" }`): `E_NOT_FOUND` (404, unknown path), `E_METHOD` (405,
+known path with another method, `Allow` header), `E_INTERNAL` (500, unexpected error; the log names the route and the
+error's class, never its message).

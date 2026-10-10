@@ -1,9 +1,9 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["es2023", "webworker"],
-    "types": ["node"]
+    "lib": ["es2023"],
+    "types": ["@cloudflare/workers-types"]
   },
-  "include": ["**/*.js", "**/*.jsx", "**/*.mjs", "**/*.cjs"],
-  "exclude": ["node_modules", "dist", "out", "**/*.config.js", "**/*.config.mjs"]
+  "include": ["src/**/*.js"],
+  "exclude": ["node_modules", "dist", ".wrangler"]
 }

@@ -3,5 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "BrandHub Café Worker and CafeStore Durable Object (cafe.brandhub.ma)."
+  "description": "BrandHub Café Worker and CafeStore Durable Object (cafe.brandhub.ma).",
+  "dependencies": {
+    "@brandhub/kit-worker": "0.0.0"
+  }
 }

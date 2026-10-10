@@ -3,5 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Cloudflare side of the kit: TenantStore base Durable Object, sync, auth and control endpoints, cron helpers (prompts 04, 05, 07)."
+  "description": "Cloudflare side of the kit: TenantStore base Durable Object, sync, auth and control endpoints, cron helpers (prompts 04, 05, 07).",
+  "dependencies": {
+    "@brandhub/kit": "0.1.0"
+  },
+  "exports": {
+    "./env": "./src/env.js",
+    "./http": "./src/http.js",
+    "./jurisdiction": "./src/jurisdiction.js",
+    "./tenant-store": "./src/tenant-store.js",
+    "./migrate": "./src/migrate.js",
+    "./registry": "./src/registry.js"
+  }
 }

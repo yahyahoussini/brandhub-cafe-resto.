@@ -1,0 +1,10 @@
+# Headers of docs/08 §7 on every static route of resto.brandhub.ma (the app shell, /caisse, /menu/:slug, /commande/*,
+# /reserver/* included, docs/02 §4). The Worker sets the same headers on /api/* and /r/*
+# (@brandhub/kit-worker/http). Vite copies this file into dist/; Workers static assets apply it and never serve it.
+/*
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; connect-src 'self' wss://resto.brandhub.ma http://*:17800; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+  Strict-Transport-Security: max-age=31536000
+  X-Robots-Tag: noindex
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  Permissions-Policy: camera=(self), usb=(self), serial=(self), bluetooth=(self), geolocation=()

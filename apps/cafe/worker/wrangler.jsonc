@@ -1,0 +1,132 @@
+// BrandHub Café Worker (docs/02 §4, docs/12 §2 and §4). Wrangler 4.149.
+//
+// Three environments (D45):
+// - top level = local: `npm run dev:cafe` (wrangler dev on http://localhost:8787, Miniflare storage in .wrangler/)
+//   and the Vitest tests. ENVIRONMENT "local" relaxes the CSP and drops HSTS (packages/kit-worker/src/http.js).
+// - env.staging: `npx wrangler deploy -c apps/cafe/worker/wrangler.jsonc --env staging`
+//   → brandhub-cafe-staging.<account>.workers.dev, demo tenants only.
+// - env.production: cafe.brandhub.ma, from the release prompt (20) on (docs/12 §5).
+// Always deploy with --env: the top level is not a deploy target.
+// Environments inherit main, compatibility_date, assets, migrations and triggers, but not bindings or vars: each env
+// repeats durable_objects, d1_databases, r2_buckets, version_metadata and vars.
+//
+// Secrets (docs/02 §4, docs/12 §2), never in this file or any committed file:
+//   CONTROL_PUBLIC_KEYS, LICENCE_PUBLIC_KEYS, DATA_KEY, EXPORT_KEY, WHATSAPP_TOKEN, RESEND_API_KEY
+//   set with `npx wrangler secret put <NAME> -c apps/cafe/worker/wrangler.jsonc --env <staging|production>` (paste the
+//   value when Wrangler asks); locally in apps/cafe/worker/.dev.vars (git-ignored).
+{
+  "$schema": "../../../node_modules/wrangler/config-schema.json",
+  "name": "brandhub-cafe",
+  "main": "src/index.js",
+  // The newest date the installed workerd (1.20261006.1, Wrangler 4.149) supports, so local tests run what Cloudflare
+  // runs (prompt 04, 10 Oct 2026).
+  "compatibility_date": "2026-10-06",
+
+  // The built PWA (apps/cafe/web/dist). The Worker runs first only for the API and digital receipts; every other path
+  // is a static asset or the app shell, with the headers of docs/08 §7 from web/public/_headers.
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/r/*"],
+  },
+
+  // One CafeStore per client, with SQLite storage, always reached through
+  // env.STORE.jurisdiction("eu").idFromName(tenantId) (D19, @brandhub/kit-worker/jurisdiction).
+  "durable_objects": {
+    "bindings": [{ "name": "STORE", "class_name": "CafeStore" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CafeStore"] }],
+
+  // The registry. Created with `npx wrangler d1 create brandhub-cafe-registry --jurisdiction eu` (the jurisdiction is
+  // fixed at creation, docs/12 §2). Its migrations are shared by both products.
+  "d1_databases": [
+    {
+      "binding": "REGISTRY",
+      "database_name": "brandhub-cafe-registry",
+      "migrations_dir": "../../../packages/kit-worker/migrations/registry",
+    },
+  ],
+
+  // Files (photos, exports): an EU-jurisdiction bucket; the binding declares the jurisdiction (docs/02 §4).
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "brandhub-cafe-files", "jurisdiction": "eu" }],
+
+  // Evening reports every 15 minutes (prompt 18) and the nightly export at 02:30 UTC (docs/12 §8).
+  "triggers": { "crons": ["*/15 * * * *", "30 2 * * *"] },
+
+  // The Worker Version id and date, for GET /api/health.
+  "version_metadata": { "binding": "VERSION" },
+
+  // Empty values are not known yet: CONTROL_KEY_IDS and LICENCE_KEY_IDS come from `node tools/admin.mjs keys:generate`
+  // (prompt 07), WHATSAPP_PHONE_ID and REPORT_FROM_EMAIL from prompt 18 (docs/12 §7).
+  "vars": {
+    "PRODUCT": "cafe",
+    "APP_ORIGIN": "http://localhost:8787",
+    "CONTROL_KEY_IDS": "",
+    "LICENCE_KEY_IDS": "",
+    "WHATSAPP_PHONE_ID": "",
+    "REPORT_FROM_EMAIL": "",
+    "ENVIRONMENT": "local",
+  },
+
+  "dev": { "port": 8787 },
+
+  "env": {
+    "staging": {
+      "name": "brandhub-cafe-staging",
+      "workers_dev": true,
+      "durable_objects": {
+        "bindings": [{ "name": "STORE", "class_name": "CafeStore" }],
+      },
+      // database_id: paste the id printed by `npx wrangler d1 create brandhub-cafe-registry --jurisdiction eu` before
+      // the first deploy. Without it, Wrangler looks the database up by name and, if it does not exist, creates one
+      // OUTSIDE the EU jurisdiction: create it first, or deploy with --no-x-provision.
+      "d1_databases": [
+        {
+          "binding": "REGISTRY",
+          "database_name": "brandhub-cafe-registry",
+          "migrations_dir": "../../../packages/kit-worker/migrations/registry",
+        },
+      ],
+      "r2_buckets": [{ "binding": "FILES", "bucket_name": "brandhub-cafe-files", "jurisdiction": "eu" }],
+      "version_metadata": { "binding": "VERSION" },
+      // APP_ORIGIN: https://brandhub-cafe-staging.<account subdomain>.workers.dev, written here once the first deploy
+      // prints it (until then the CSP names no WebSocket host beyond 'self').
+      "vars": {
+        "PRODUCT": "cafe",
+        "APP_ORIGIN": "",
+        "CONTROL_KEY_IDS": "",
+        "LICENCE_KEY_IDS": "",
+        "WHATSAPP_PHONE_ID": "",
+        "REPORT_FROM_EMAIL": "",
+        "ENVIRONMENT": "staging",
+      },
+    },
+
+    "production": {
+      "name": "brandhub-cafe",
+      "workers_dev": false,
+      "preview_urls": false,
+      // Release prompt 20 (docs/12 §5), after the brandhub-soon Worker releases the host:
+      // "routes": [{ "pattern": "cafe.brandhub.ma", "custom_domain": true }],
+      "durable_objects": {
+        "bindings": [{ "name": "STORE", "class_name": "CafeStore" }],
+      },
+      // The production registry and bucket are created at release prompt 20, in the EU jurisdiction like staging's;
+      // their binding entries (REGISTRY with its database_name, database_id and migrations_dir, FILES with its
+      // bucket_name and "jurisdiction": "eu") go here then.
+      "d1_databases": [],
+      "r2_buckets": [],
+      "version_metadata": { "binding": "VERSION" },
+      "vars": {
+        "PRODUCT": "cafe",
+        "APP_ORIGIN": "https://cafe.brandhub.ma",
+        "CONTROL_KEY_IDS": "",
+        "LICENCE_KEY_IDS": "",
+        "WHATSAPP_PHONE_ID": "",
+        "REPORT_FROM_EMAIL": "",
+        "ENVIRONMENT": "production",
+      },
+    },
+  },
+}

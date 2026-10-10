@@ -156,7 +156,8 @@ CREATE TABLE deadletter (id TEXT PRIMARY KEY, device TEXT, received_at INTEGER, 
 ```
 Projections (rebuildable): `orders` (id, status, mode, table, zone, covers, owner, opened/closed at, business_date,
 receipt_no UNIQUE, total, paid, discount, state JSON) · `sales_lines` (one row per active line of a closed order:
-product, category, station, qty, net TTC, VAT rate and amount, doses, zone, staff, device, business date, hour) ·
+product, category, tax class (the category's `taxClass` in force at closing, docs/11 §6), station, qty, net TTC, VAT
+rate and amount, doses, zone, staff, device, business date, hour) ·
 `payments` · `banks` (with expected, counted, variance) · `catalog_*` · `staff` · `devices` (token hash, kind, prefix,
 station, paired/revoked/last seen, app version) · `zones`, `tables` · `stock_items`, `stock_levels`, `stock_movements` ·
 `machine_readings` · `receipt_series` (ledger per till) · `settings` (path, value, at, event id) · `daily` (business date,

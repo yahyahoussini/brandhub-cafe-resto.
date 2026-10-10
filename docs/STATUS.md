@@ -54,9 +54,15 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
   - the clock-skew rule was missing from reports;
   - the average ticket did not include credit notes in revenue;
   - each bank's Z had no ticket series, VAT or Kredi cash line.
-- Apps: not started. Empty workspaces exist (prompt 01): `@brandhub/kit-web`, `@brandhub/kit-worker`,
-  `@brandhub/cafe-worker`, `@brandhub/cafe-web`, `@brandhub/resto-worker`, `@brandhub/resto-web`, `@brandhub/station`,
-  `@brandhub/tools`.
+- Apps: no screen yet. Workspaces (prompt 01): `@brandhub/kit-web`, `@brandhub/kit-worker`, `@brandhub/cafe-worker`,
+  `@brandhub/cafe-web`, `@brandhub/resto-worker`, `@brandhub/resto-web`, `@brandhub/station`, `@brandhub/tools`. The
+  two web apps serve only the dev style guide (prompt 02); the Workers and the Station have no source yet.
+- Check of prompts 00–03 (10 Oct 2026, from a clean `npm ci`): every "Do" item, constraint and acceptance check
+  re-run. The gate passes (172 tests); the lint plant fails on all 12 physical classes and the café↔resto import in both
+  directions; the i18n plant fails; contrast 52/52; e2e 21 passed, 15 skipped, `localhost` only; the acceptance day
+  gives every docs/01 §6 number; the event registry and the §8 defaults match docs/03 one to one; DECISIONS.md,
+  CLAUDE.md, `data/` and the 75 provided tests are unchanged. Fixed: the `sales_lines` tax class (finding 7). Open:
+  the "Ftour complet" set menu (Open items).
 - Tooling (prompt 01):
   - `npm run typecheck` (`tools/scripts/typecheck.mjs`) runs `tsc -p` on the root and every workspace that has source;
     empty workspaces print "skipped (no source yet)". Libraries per area:
@@ -185,8 +191,9 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
 
 ## Orientation findings (prompt 00)
 Each one was found by one reader and checked by a second agent. Items 1–3 were reproduced with node. DECISIONS.md wins
-unless stated. Applied in prompt 03 (kit bugs and spec gaps that prompt allows): 1, 2, 3, 7 (category fields), 8, 9 and
-15 (lock timeouts, permissions). The others wait for Yahya.
+unless stated. Applied in prompt 03 (kit bugs and spec gaps that prompt allows): 1, 2, 3, 7 (category fields; the
+`sales_lines` tax class added at the 10 Oct check), 8, 9 and 15 (lock timeouts, permissions). The rest of 7 (the
+"Ftour complet" set menu) and the others wait for Yahya.
 
 1. **Receipt numbering crashes** — `packages/kit/src/receipts.js:88,118-127`, docs/04 §10 scenario 8. After a till uses
    up its blocks, `addBlock` keeps the stale `next`; the next non-contiguous block gives `remaining()=10` and
@@ -250,7 +257,8 @@ docs/14 has no task for several docs/11 §11 items (2, 3, 4, 6, 12, 13).
 - `dev:cafe`, `dev:resto`, `dev:station` (CLAUDE.md "Commands") need Wrangler, Vite and Electron. Prompts 04, 02/11
   and 08 add them with those tools.
 - The kit tests are not type-checked (see Tooling). Adding `// @ts-check` and fixing them is a kit change; do it only
-  with Yahya's agreement (prompt 03 is the natural place).
+  with Yahya's agreement. Prompt 03 left them as provided (its constraint: do not change the provided modules); still
+  open.
 
 **Design system (prompt 02)**: Yahya decides; the design system file is docs/07.
 - docs/07 has no dark value for `--bh-brand-ink`, `--bh-mid`, `--bh-ok-soft`, `--bh-warn-soft`, `--bh-danger-soft`.
@@ -317,6 +325,9 @@ To confirm (from docs/11 §11, data flags and Darija drafts). Who confirms → n
 - Hikvision/Dahua POS protocol fields → prompt 42 (task 24); Glovo API version → prompt 43 (task 18).
 - Suggested dose quantities (`cafe.json`, 15 entries) → the café owner; recipe quantities (`resto.json`, 7) → the
   Resto chef (task 17).
+- "Ftour complet" in `data/menu-templates/resto.json` has `setMenu: true`, but `setMenus` defines only
+  `menu_du_jour`: its steps (what the Ramadan menu contains) → the Resto chef or Yahya, before prompt 24 (Ramadan) and
+  prompt 27 (Resto onboarding).
 
 **Inputs**
 - Gate 1 not run: no demand evidence before the build. Pilot 1 not chosen: blocks prompt 09 hardware by 12 Oct and

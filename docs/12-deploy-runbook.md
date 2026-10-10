@@ -29,9 +29,10 @@ history: paste them when Wrangler asks.
 node tools/admin.mjs keys:generate
 ```
 It writes the command and licence key pairs to `~/.brandhub/keys/` (mode 600) and prints the two public-key JSON maps to
-paste as `CONTROL_PUBLIC_KEYS` and `LICENCE_PUBLIC_KEYS` for both products. Back up `~/.brandhub/keys/` in your password
-manager. `DATA_KEY` and `EXPORT_KEY`: `node tools/admin.mjs keys:data` prints two random 32-byte keys in base64; keep a
-copy of `EXPORT_KEY` offline (it decrypts the 10-year backups).
+paste as `CONTROL_PUBLIC_KEYS` and `LICENCE_PUBLIC_KEYS` for both products; the licence map also goes into each app
+build (docs/08 §5). Back up `~/.brandhub/keys/` in your password manager. `DATA_KEY` and `EXPORT_KEY`:
+`node tools/admin.mjs keys:data` prints two random 32-byte keys in base64; keep a copy of `EXPORT_KEY` offline (it
+decrypts the 10-year backups).
 
 ## 4. Environments
 | Env | Host | Data | Used for |
@@ -88,6 +89,7 @@ from R2; its SQLite stays.
 ## 11. Yearly
 Rotate the command key (new kid, both accepted for a month). Rotate the licence key in this order, so a 12-month
 licence never outlives its key: (1) publish the new public key in an app build and in `LICENCE_PUBLIC_KEYS` first;
-(2) during the month both kids are accepted, re-sign every live licence with the new key, same plan, limits and dates
-(`tenant:subscription`, the control API's licence issue call, docs/09 §1 #2); (3) only then drop the old kid.
+(2) during the month both kids are accepted, re-sign every live licence with the new key and nothing else changed
+(plan, limits, modules, dates, `suspended`: a suspended tenant stays suspended) through `tenant:subscription` (the
+control API's licence issue call, docs/09 §1 #2); (3) only then drop the old kid.
 `DATA_KEY` only after an incident (re-encrypt), check the WhatsApp price, renew the code-signing certificate if bought.

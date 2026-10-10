@@ -29,14 +29,14 @@ its releases go out only in the window of D46 (Tuesday 03:00–06:00); the first
 | 01 | Repository scaffold, lint, type check, tests | kit | the private GitHub repository (task 3) |
 | 02 | Design system, fonts offline, UI parts, i18n | kit | — |
 | 03 | Business rules: events, marks, stock, reports, permissions | kit | — |
-| 04 | Cloud store: one SQLite database per client | kit | Cloudflare Workers Paid (task 4) |
+| 04 | Cloud store: one SQLite database per client | kit | Cloudflare Workers Paid (task 4); the accountant's retention answer (task 28) |
 | 05 | Accounts, device pairing, staff PINs, permissions | kit | — |
 | 06 | Device store, sync and Mode panne | kit | — |
 | 07 | Control API, licence, statuses, admin tool | kit | admin keys generated, public keys as secrets (task 5) |
 | 08 | BrandHub Station (local hub) | kit | a Windows PC for the final checks |
 | 09 | Printing, cash drawer and the hardware test | kit | the reference kit or pilot 1's hardware, by 12 Oct (task 6) |
 | 10 | Quality gates and CI | kit | — |
-| 11 | Café app shell and onboarding | Café | pilot 1's menu, legal identity, VAT answer, by 26 Oct (task 7) |
+| 11 | Café app shell and onboarding | Café | pilot 1's menu, legal identity, VAT answer and minimum ticket mentions, by 26 Oct (task 7) |
 | 12 | The counter till | Café | — |
 | 13 | Waiter banking and tables | Café | — |
 | 14 | Shifts, blind count and Z | Café | — |
@@ -46,9 +46,9 @@ its releases go out only in the window of D46 (Tuesday 03:00–06:00); the first
 | 18 | Evening report on WhatsApp | Café | Meta verification, WhatsApp number, template, Darija review, by 9 Nov (tasks 8–9) |
 | 19 | Café hardening before the pilot | Café | — |
 | 20 | Café pilot release | Café | legal texts and support number by 27 Nov (tasks 10–11); pilot agreement by 29 Nov (task 12) |
-| 21 | Borsat: the digital tip pool | kit, Café | — |
+| 21 | Borsat: the digital tip pool | kit, Café | the WhatsApp opt-in check (task 23) |
 | 22 | Kredi: customer tabs and staff advances | kit, Café | the WhatsApp opt-in check (task 23) |
-| 23 | Compliance pack and digital receipt | kit, Café | — |
+| 23 | Compliance pack and digital receipt | kit, Café | the answers on the buyer's ICE and the digital receipt (task 29) |
 | 24 | Mode Ramadan | Café | — |
 | 25 | Coût de la tasse and supplier prices | Café | — |
 | 26 | Stamp card | kit, Café | — (before 1 Feb 2027: tasks 13–14) |
@@ -60,14 +60,14 @@ its releases go out only in the window of D46 (Tuesday 03:00–06:00); the first
 | 32 | Recipes and food cost | Resto | — |
 | 33 | Stock, suppliers and purchasing | Resto | — |
 | 34 | Staff, time clock and tips | Resto | — |
-| 35 | Resto reports, compliance pack and evening report | Resto | — |
+| 35 | Resto reports, compliance pack and evening report | Resto | each restaurant's débit-de-boissons answer (task 30) |
 | 36 | Resto hardening and pilot release | Resto | Resto pilot agreement and legal texts (task 27) |
 | 37 | Phone orders, deliveries and customer accounts | Resto | lawyer's consent wording, accountant's VAT answers (tasks 20–21) |
 | 38 | Direct ordering by link, QR and WhatsApp | Resto | Turnstile widget, lawyer's order-page list (tasks 20, 22) |
 | 39 | Reservations, deposits and Mode Match | kit, Resto (Café V2) | accountant's answer on deposits (task 21) |
 | 40 | Order book: traiteur, pâtisserie and Aïd orders | kit, Resto (Café V2) | — |
 | 41 | Menu engineering and table yield | Resto, Café V2 | — |
-| 42 | Camera link: ticket text on the NVR recording | kit, both | access to a Hikvision NVR (task 24) |
+| 42 | Camera link: ticket text on the NVR recording | kit, both | access to a Hikvision NVR (task 24); the lawyer's answer on the video CNDP formality (task 31) |
 | 43 | Delivery-app inbox: Glovo first | Resto | Glovo approval, staging access, API documentation, a payout statement (task 18) |
 | 44 | Multi-site | Resto | a client with `limits.sites` ≥ 2 |
 | 45 | Android shell for Sunmi and iMin (only if needed) | both | the device (task 25) |

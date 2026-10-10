@@ -20,9 +20,9 @@ BrandHUB Go-Live and Client Operations (5 Sep), Guide BrandHUB (client guide), M
 - **Security rules**: 4–6 digit staff PINs checked locally with lockout; TOTP for owners; 256-bit device tokens, hashed
   and revocable; manager PIN for voids after sending, refunds, discounts above the cap (cashier 10 %) and reprints after
   the first.
-- **Operations**: activation link + 6-digit code valid 72 h; invitation-only in year one; the setup visit (60–90 min, the
-  unplug-the-router drill, training 10/5/10 min); support on one WhatsApp number 08:00–00:00; releases Tuesday 03:00–06:00,
-  never during service or Ramadan evenings.
+- **Operations**: activation link + 6-digit code valid 72 h; invitation-only in year one; the setup visit (60–90 min,
+  the unplug-the-router drill, training 10/5/10 min, now set per role in docs/13 §3); support on one WhatsApp number
+  08:00–00:00; releases Tuesday 03:00–06:00, never during service or Ramadan evenings.
 - **Design system**: fonts, colours, 2 px radius, 48 px targets, light till / dark kitchen, Arabic rules.
 - **Business rules**: never sell hardware; never become the payment facilitator; bill BrandHub's own clients by transfer
   or cash first; never claim a tax certification.

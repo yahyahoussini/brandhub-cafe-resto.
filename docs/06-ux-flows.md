@@ -24,7 +24,8 @@ pill) · the current order at the end side (lines, total, actions) · bottom bar
    required options; optional ones via a long press or "Options".
 3. **Cash with change.** Payer → quick notes 20 · 50 · 100 · 200 → "Rendu 25,00" in large type → confirm.
 4. **Other tenders.** Carte (TPE externe: reference required, last 4 digits or slip number) · Maroc Pay (reference) ·
-   Virement · Bon · Crédit (Kredi, V1.1). **Split:** by amount or in n equal parts (`splitEvenly`).
+   Virement · Bon · Crédit (Kredi, V1.1) · Autre. **Split:** by amount or in n equal parts
+   (`splitEvenly`).
 5. **Tables.** "Table" → zone tabs (Salle, Terrasse) → table grid with time and amount → tap a table to open or resume it.
 6. **Mistakes.** Tap a line → quantity stepper or "Annuler la ligne" (manager approval once sent). "Dernier ticket" →
    reprint (the first is free, the next ones need approval; counted on the Z).

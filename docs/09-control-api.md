@@ -79,7 +79,8 @@ node tools/admin.mjs tenant:subscription --product cafe --tenant tnt_… --plan 
 node tools/admin.mjs tenant:suspend --product cafe --tenant tnt_… --reason "…"
 node tools/admin.mjs tenant:restore --product cafe --tenant tnt_… --reason "…"
 node tools/admin.mjs tenant:owner-reset --product cafe --tenant tnt_…
-node tools/admin.mjs tenant:pitr --product cafe --tenant tnt_… --at <ISO time> [--dry-run]   # POST /api/admin/restore
+node tools/admin.mjs tenant:pitr --product cafe --tenant tnt_… --at <ISO time> [--dry-run] \
+     [--base https://<staging host>]   # POST /api/admin/restore
 node tools/admin.mjs report --product cafe [--tenant tnt_…]
 node tools/admin.mjs health --product resto
 node tools/admin.mjs test-sequence --product cafe --base https://<staging host>
@@ -87,6 +88,7 @@ node tools/admin.mjs test-sequence --product cafe --base https://<staging host>
 Every command is written first to `~/.brandhub/outbox.jsonl` and retried with growing delays until the product confirms
 (the Master Spec's outbox rule); `admin.mjs outbox` shows pending and failed commands. The tool prints activation links
 and codes for Yahya to send on WhatsApp; it never prints private keys.
+`tenant:pitr` skips the outbox: it runs once and prints the result, so a late retry never rolls back newer events.
 
 ## 7. Registering the product in admin.brandhub.ma (later)
 Name, slug (`cafe`, `resto`), subdomain, API base URL, plans and limit keys (`data/plans.json`), module keys

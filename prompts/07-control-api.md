@@ -17,9 +17,10 @@ D27, D28, D49 · `packages/kit/src/licence.js`, `control-signature.js`, `crypto.
    stored response); command log on the product side; errors of §3. Endpoint 1 creates the tenant in the registry and its
    store, the owner login and the activation (reuse prompt 05); endpoint 2 verifies the licence (`verifyLicence` with
    `LICENCE_PUBLIC_KEYS`) and that it matches the body; endpoint 5 returns counts and flags only.
-2. Devices: store the licence from `/api/licence`, compute the status with `accessStatus` and the server's status (the
-   stricter wins), apply `tillPermissions` when a shift opens, show the grace / read-only / suspended banners, and keep
-   selling in an open shift (D14). Back office in read-only mode when the status says so.
+2. Devices: verify the licence from `/api/licence` with `verifyLicence` and the licence public keys bundled in the app
+   build (docs/08 §5), store it, compute the status with `accessStatus` and the server's status (the stricter wins),
+   apply `tillPermissions` when a shift opens, show the grace / read-only / suspended banners, and keep selling in an
+   open shift (D14). Back office in read-only mode when the status says so.
 3. `tools/admin.mjs` (Node 22, no framework): every command of docs/09 §6, keys in `~/.brandhub/keys/` with mode 600,
    `keys:data` for `DATA_KEY`/`EXPORT_KEY`, the outbox `~/.brandhub/outbox.jsonl` with retries, `test-sequence`. It signs
    licences with the licence key and commands with the command key. It never prints a private key.
@@ -27,8 +28,9 @@ D27, D28, D49 · `packages/kit/src/licence.js`, `control-signature.js`, `crypto.
    Durable Object, outside the control API but signed and checked like its calls (`verifyRequest`,
    `CONTROL_PUBLIC_KEYS`, request ids). The store takes a bookmark with `getBookmarkForTime(at)`, applies it with
    `onNextSessionRestoreBookmark` and restarts; `dryRun: true` returns the bookmark and changes nothing. The admin.mjs
-   command `tenant:pitr --product cafe --tenant tnt_… --at <ISO time> [--dry-run]` calls it (`tenant:restore` already
-   means un-suspend).
+   command `tenant:pitr --product cafe --tenant tnt_… --at <ISO time> [--dry-run] [--base <URL>]` calls it
+   (`tenant:restore` already means un-suspend); it skips the outbox and is never retried, so a late retry cannot roll
+   back newer events.
 5. Tests: signature failures (stale, bad signature, unknown key, missing header), idempotent replay, licence mismatch
    (422), status transitions with fixed dates in `Africa/Casablanca`, a device in read-only that cannot open a shift but
    finishes an open one (Playwright with `page.clock`).

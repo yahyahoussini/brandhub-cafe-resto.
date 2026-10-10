@@ -71,8 +71,9 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
     - Station and tools: DOM lib, for the kit's `CryptoKey`;
     - kit `src/`: DOM lib and no Node types, so a Node-only API in the pure rules fails.
     The root tsconfig checks `e2e/` and the build configs (`*.config.js` of each app), which run on Node.
-  - The kit's tests have no `// @ts-check` and are not strict-clean (30 errors); they stay untouched as provided and
-    are not type-checked.
+  - The kit's tests are type-checked by `packages/kit/tsconfig.test.json` (Node types, modelled on kit-web's). With
+    Yahya's agreement (10 Oct 2026) the ten provided test files got `// @ts-check` and JSDoc comments only (22 strict
+    errors to 0); no test, assertion, input or name changed.
   - `npm run lint`: ESLint 9 flat config with `@eslint/js` recommended and `ecmaVersion` 2025 (JSON imports need
     `with { type: "json" }` under NodeNext). Rules:
     - `bh/logical-css` (`tools/eslint/logical-css.js`, 19 tests): follows constants, variant maps, ternaries and
@@ -192,8 +193,10 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
 ## Orientation findings (prompt 00)
 Each one was found by one reader and checked by a second agent. Items 1–3 were reproduced with node. DECISIONS.md wins
 unless stated. Applied in prompt 03 (kit bugs and spec gaps that prompt allows): 1, 2, 3, 7 (category fields; the
-`sales_lines` tax class added at the 10 Oct check), 8, 9 and 15 (lock timeouts, permissions). The rest of 7 (the
-"Ftour complet" set menu) and the others wait for Yahya.
+`sales_lines` tax class added at the 10 Oct check), 8, 9 and 15 (lock timeouts, permissions). Applied on 10 Oct 2026
+when Yahya asked to fix every open item (commits `b3189f5` and the next): 5 (D44 amended), 10, 11, 13 and 14, each
+checked by two verifiers. Still Yahya's choice: 4 (licence modules rule), 6 (VAT precedence), 12 (define or drop
+"weak visibility") and the rest of 7 (the "Ftour complet" set menu); none blocks prompts 04–06.
 
 1. **Receipt numbering crashes** — `packages/kit/src/receipts.js:88,118-127`, docs/04 §10 scenario 8. After a till uses
    up its blocks, `addBlock` keeps the stale `next`; the next non-contiguous block gives `remaining()=10` and
@@ -241,24 +244,32 @@ unless stated. Applied in prompt 03 (kit bugs and spec gaps that prompt allows):
     Prompt 03 added `lock.tillSeconds`, `lock.phoneSeconds` and `permissions`; the drawer setting is prompt 09's, the
     other loss thresholds prompt 17's.
 
-Smaller verified items for later: D11 Arabic-Indic digits not in docs/07 or settings; D20 calls heartbeats marks while
-docs/03 says they are not events; docs/03 says the kit implements §2–§6 (only §7 is provided); docs/04 §9 cites docs/03
-§4 instead of §7; `dev:*` scripts and `npm run rebuild` created by no prompt; docs/02 §2 workspace globs vs prompt 01;
-long press on a till tile has two meanings (docs/06 §2.2 and §2.7); docs/07 colour tokens incomplete and some fail contrast;
-sync-badge wording (D15 vs glossary); D7 "unlimited" vs `99` in plans.json; no module key for Café's PIN clock (D32);
-`deadletter.resolved` shape differs (docs/03 vs docs/04); Z tender list omits `other`; Station keys differ (docs/05 §1,
-`printing.routes`, templates); evening-report template has no dead-letter variable; docs/13 lists seven Gate 2 targets
-under D48, which sets three; docs/02 cites a shutdown order docs/13 lacks; training times differ (digest vs docs/13);
-docs/14 has no task for several docs/11 §11 items (2, 3, 4, 6, 12, 13).
+Smaller verified items. Fixed on 10 Oct 2026:
+- heartbeats follow D20's last-writer-wins rule but live in the `heartbeats` table (docs/03 §5 note);
+- docs/03's kit map was already right; docs/04 §9 now cites docs/03 §7; docs/02 §2 workspace globs (prompt 03);
+- `deadletter.resolved {how, note}` with the rejected event's id as entity, in docs/03 and docs/04 alike;
+- `other` in the Z tender list (docs/10 §2) and the payment sheet (docs/06 §2, "Autre");
+- docs/13 §5 keeps D48's three Gate 2 targets; the other four are "also watched";
+- docs/02's power row no longer cites a shutdown order that does not exist (whether one is needed is still open);
+- training times: docs/13 §3 (per role) is the value in force; the digest's 10/5/10 is marked as the old plan's;
+- docs/14 tasks 28–31 and task 7 cover docs/11 §11 items 2, 3, 4, 6, 12, 13; prompts/README lists them per prompt;
+- 99 in `plans.json` means unlimited (D7), written in docs/01 §5.
+Left as is:
+- sync-badge wording: D15 sets the badge text ("N en attente"), and the app shows exactly that (`sync.pending`). The
+  glossary term `pending_sync` stays "En attente d'envoi": changing it to "En attente" would give it the same French and
+  Arabic as `hold` (a kitchen line on hold).
+- no module key for Café's PIN clock (D32): adding one changes `data/` (Yahya); proposal: the PIN clock sits in
+  `compliance_pack` (V1.1, prompt 23, docs/01 §4).
+Still open: D11 Arabic-Indic digits not in docs/07 or settings (prompt 05 stores the per-user option); `dev:*` and
+`npm run rebuild` scripts (prompts 04 and 08); long press on a till tile has two meanings (docs/06 §2.2 and §2.7, before
+prompt 12); docs/07 colour tokens; Station keys differ (docs/05 §1, `printing.routes`, templates, before prompt 08);
+evening-report template has no dead-letter variable (before prompt 18).
 
 ## Open items
 **Build (prompt 01)**
 - The GitHub repository is still public (task 3 asks for private); Yahya changes it in GitHub settings.
 - `dev:cafe`, `dev:resto`, `dev:station` (CLAUDE.md "Commands") need Wrangler, Vite and Electron. Prompts 04, 02/11
   and 08 add them with those tools.
-- The kit tests are not type-checked (see Tooling). Adding `// @ts-check` and fixing them is a kit change; do it only
-  with Yahya's agreement. Prompt 03 left them as provided (its constraint: do not change the provided modules); still
-  open.
 
 **Design system (prompt 02)**: Yahya decides; the design system file is docs/07.
 - docs/07 has no dark value for `--bh-brand-ink`, `--bh-mid`, `--bh-ok-soft`, `--bh-warn-soft`, `--bh-danger-soft`.
@@ -291,21 +302,22 @@ To confirm (from docs/11 §11, data flags and Darija drafts). Who confirms → n
 **Accountant (client's)**
 - §11.1 takeaway/delivery VAT; `tax-presets.json` `vat.takeawayBp`, `vat.deliveryBp` (`toConfirm`) → prompt 11, 37 (tasks 7, 21).
 - On-site 10 % and standard 20 % VAT (`secondary_sources`; onboarding checkbox) → prompt 11 (task 7).
-- §11.2 minimum mentions on consumer tickets → prompt 09/11 (no docs/14 task; add to task 7).
-- §11.3 buyer's ICE on B2B invoices → prompt 23 (no docs/14 task).
-- §11.4 retention 10 years (D43, D49) → prompt 04 (no docs/14 task).
-- §11.6 débit-de-boissons liability per restaurant; commune rate outside Casablanca/Salé → prompt 23, 35.
+- §11.2 minimum mentions on consumer tickets → prompt 09/11 (task 7).
+- §11.3 buyer's ICE on B2B invoices (accountant or lawyer) → prompt 23 (task 29).
+- §11.4 retention 10 years (D43, D49) → prompt 04 (task 28).
+- §11.6 débit-de-boissons liability per restaurant; commune rate outside Casablanca/Salé → prompt 35 and each
+  restaurant's onboarding (task 30).
 - §11.10 VAT on deposits and delivery fee → prompt 37, 39 (task 21).
 - PCGE account codes of the Sage export → prompt 17.
 
 **Lawyer**
 - §11.5 CNDP transfer formality, DPA, privacy, CGU (FR/AR) → prompt 20, 1 Feb 2027, prompt 36 (tasks 10, 14, 27).
 - §11.8 oral phone consent text; §11.9 online order page (Law 31-08) → prompt 37, 38 (task 20).
-- §11.12 digital receipt replacing paper (Law 31-08 art. 4) → prompt 23 (no docs/14 task).
-- §11.13 client's CNDP formality for video with ticket text → prompt 42 (no docs/14 task).
+- §11.12 digital receipt replacing paper (Law 31-08 art. 4; accountant or lawyer) → prompt 23 (task 29).
+- §11.13 client's CNDP formality for video with ticket text → prompt 42 (task 31).
 
 **Yahya**
-- §11.11 Meta opt-in for messages to clients' customers → before prompt 22 (task 23).
+- §11.11 Meta opt-in for messages to clients' customers → before prompt 21 (task 23).
 - §11.7 e-invoicing phase per client; UBL mapping when DGI publishes → prompt 46 (task 26).
 - Darija drafts: evening report `data/evening-report.json:54` → prompt 18 (task 9); 40 glossary terms
   `data/glossary.json` (`draft_review_by_yahya`) → prompt 18, 20, 22 (no task); quick-card Darija lines → prompt 20
@@ -334,4 +346,8 @@ To confirm (from docs/11 §11, data flags and Darija drafts). Who confirms → n
   prompt 11 by 26 Oct.
 
 ## Decisions changed during the build
-_None yet. Any change is made in DECISIONS.md first._
+Any change is made in DECISIONS.md first.
+- **D44, 10 Oct 2026** (prompt 00 finding 5, Yahya asked to fix every open item): Worker and Durable Object tests run
+  with Cloudflare's Vitest integration inside the Workers runtime, as prompt 04 asks; `node:test` stays for the units
+  and `npm test` runs both. CLAUDE.md's `npm test` row says the same. Cloudflare renamed the package
+  `@cloudflare/vitest-pool-workers` to `@cloudflare/vitest-plugin` (0.23.0 is deprecated); the build uses the new name.

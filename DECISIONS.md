@@ -300,9 +300,10 @@ confirmed with a lawyer (docs/11 §8).
 ## F. Build and operations
 
 ### D44 · Repository and tools
-**Decision.** npm workspaces; tests with `node:test` (units), `@cloudflare/vitest-pool-workers` (Worker and Durable
-Object tests, JavaScript files, also run by `npm test`) and Playwright (end to end, French and Arabic, 360 px and tablet
-sizes); GitHub Actions; Wrangler for deploys; electron-builder for the Station installer.
+**Decision.** npm workspaces; tests with `node:test` (units), Cloudflare's Vitest integration
+`@cloudflare/vitest-plugin` (Worker and Durable Object tests, JavaScript files, also run by `npm test`) and Playwright
+(end to end, French and Arabic, 360 px and tablet sizes); GitHub Actions; Wrangler for deploys; electron-builder for
+the Station installer.
 **Changed 10 Oct 2026** (prompt 00 finding 5): Worker tests need the Workers runtime, which `node:test` does not give.
 
 ### D45 · Environments

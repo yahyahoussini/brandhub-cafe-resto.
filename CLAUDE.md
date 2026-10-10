@@ -72,7 +72,7 @@ prompts/               the build, one prompt at a time
 ## Commands (created by prompt 01; keep them working)
 | Command | What it does |
 |---|---|
-| `npm test` | unit tests of every package and app (`node --test`), then the Worker tests (`vitest-pool-workers`, D44) |
+| `npm test` | unit tests of every package and app (`node --test`), then the Worker tests (`@cloudflare/vitest-plugin`, D44) |
 | `npm run typecheck` | JSDoc type check, strict |
 | `npm run lint` | ESLint (logical CSS, no cross-app imports, no floats on money names) |
 | `npm run i18n` | every key exists in `fr` and `ar` |

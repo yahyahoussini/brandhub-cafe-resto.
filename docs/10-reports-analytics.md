@@ -23,13 +23,14 @@ Every figure is computed in the TenantStore (and for today on the Station) from 
 
 ## 2. Z report (per bank, and per day)
 Header (venue, legal line, business day, bank holder, device, opened/closed at) · tickets and credit notes (first and
-last numbers) · revenue TTC, VAT by rate, net HT · tenders (cash, card with count of slips, Maroc Pay, transfer, voucher,
-credit) · float, cash in, cash out (with reasons), expected, counted, gap · voids, discounts, openings without sale,
-reprints · dose counter (Café). The day Z adds banks side by side and the dead letters still open. A bank's Z covers the
-payments made into it (`payment.bankId`): an order paid into two banks shares its revenue and VAT between them in
-proportion to the amounts paid (largest remainder), and cash Kredi repayments have their own line, so float + cash sales
-+ Kredi cash + cash in − cash out = expected. Receipt numbers are listed per device series. Printed at closing and stored as
-a `z.closed` record with its hash (docs/03 §5): the Z shown later is that record, never a recomputation.
+last numbers) · revenue TTC, VAT by rate, net HT · tenders (cash, card with count of slips, Maroc Pay, transfer,
+voucher, credit, other) · float, cash in, cash out (with reasons), expected, counted, gap · voids, discounts, openings
+without sale, reprints · dose counter (Café). The day Z adds banks side by side and the dead letters still open. A
+bank's Z covers the payments made into it (`payment.bankId`): an order paid into two banks shares its revenue and VAT
+between them in proportion to the amounts paid (largest remainder), and cash Kredi repayments have their own line, so
+float + cash sales + Kredi cash + cash in − cash out = expected. Receipt numbers are listed per device series. Printed
+at closing and stored as a `z.closed` record with its hash (docs/03 §5): the Z shown later is that record, never a
+recomputation.
 
 ## 3. Evening report (`evening_report`, D35)
 One report per business day, sent at the first of: the manager's "Clôturer la journée" (`day.closed`), or the fallback

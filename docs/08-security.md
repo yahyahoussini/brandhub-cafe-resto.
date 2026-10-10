@@ -39,13 +39,15 @@ server re-checks the approval fields; the kit re-checks the approval's presence.
 | Key | Algorithm | Private key lives | Public key lives | Rotation |
 |---|---|---|---|---|
 | Command key (control API) | Ed25519 | `~/.brandhub/keys/command-<year>.jwk` on Yahya's computer, later admin.brandhub.ma secrets | Worker secret `CONTROL_PUBLIC_KEYS` (JSON kid → key) | yearly; both kids accepted during the switch |
-| Licence key | Ed25519 | same place, separate file | Worker secret `LICENCE_PUBLIC_KEYS`, shipped to devices at pull | yearly |
+| Licence key | Ed25519 | same place, separate file | Worker secret `LICENCE_PUBLIC_KEYS` + each app build | yearly |
 | Data key | AES-256-GCM | Worker secret `DATA_KEY` | — | on incident; re-encrypt |
 | Export key | AES-256-GCM | Worker secret `EXPORT_KEY` + a paper copy in Yahya's safe | — | yearly |
 | Lookup key | HMAC-SHA-256 | made by each client's store at activation | sent to that client's paired devices and Station, to look up phone numbers offline | on incident |
 Private keys never enter the repository, a log or a chat. Losing the command key: generate a new pair, publish the new
-public key, remove the old kid; licences stay valid until their dates. Ed25519 in WebCrypto is available in Node 22,
-Workers and current Chrome; if a device's Chrome lacks it, the app falls back to `@noble/ed25519` for verification only.
+public key, remove the old kid; licences stay valid until their dates. The licence public keys (current and next kid)
+are bundled in each app build, so a device verifies its licence offline and a compromised product server cannot add a
+key (D27); rotation: docs/12 §11. Ed25519 in WebCrypto is available in Node 22, Workers and current Chrome; if a
+device's Chrome lacks it, the app falls back to `@noble/ed25519` for verification only.
 
 ## 6. Personal data
 Customer phone numbers, names and addresses (Kredi, loyalty, delivery, bookings), owners' TOTP secrets and staff phone

@@ -1,3 +1,4 @@
+// @ts-check
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { isEntityId, isUuidv7, newId, shortCode, uuidv7, uuidv7Time } from "../src/ids.js";

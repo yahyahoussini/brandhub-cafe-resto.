@@ -1,7 +1,9 @@
+// @ts-check
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { encodeCp1252, EscPos, hasArabic, packBitmap, twoColumns } from "../src/escpos.js";
 
+/** @param {Uint8Array} u8 */
 const hex = (u8) => Buffer.from(u8).toString("hex");
 
 test("init selects the Windows-1252 code page", () => {

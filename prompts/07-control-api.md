@@ -7,8 +7,9 @@ admin.brandhub.ma's contract works on both products today, driven by `tools/admi
 the status at the next shift opening.
 
 ## Read first
-`docs/09-control-api.md` (all) · `docs/08-security.md §5` · `DECISIONS.md` D8, D14, D27, D28 · `packages/kit/src/licence.js`,
-`control-signature.js`, `crypto.js` and their tests · `data/plans.json`, `data/modules.json`.
+`docs/09-control-api.md` (all) · `docs/08-security.md §5` · `docs/12-deploy-runbook.md §8` · `DECISIONS.md` D8, D14,
+D27, D28, D49 · `packages/kit/src/licence.js`, `control-signature.js`, `crypto.js` and their tests · `data/plans.json`,
+`data/modules.json`.
 
 ## Do
 1. `packages/kit-worker/src/control-api.js`: the six endpoints of docs/09 §1 with the bodies of §2; signature check with
@@ -22,7 +23,13 @@ the status at the next shift opening.
 3. `tools/admin.mjs` (Node 22, no framework): every command of docs/09 §6, keys in `~/.brandhub/keys/` with mode 600,
    `keys:data` for `DATA_KEY`/`EXPORT_KEY`, the outbox `~/.brandhub/outbox.jsonl` with retries, `test-sequence`. It signs
    licences with the licence key and commands with the command key. It never prints a private key.
-4. Tests: signature failures (stale, bad signature, unknown key, missing header), idempotent replay, licence mismatch
+4. `POST /api/admin/restore {tenantId, at, dryRun?}` (D28, D49, docs/12 §8): point-in-time restore of one tenant's
+   Durable Object, outside the control API but signed and checked like its calls (`verifyRequest`,
+   `CONTROL_PUBLIC_KEYS`, request ids). The store takes a bookmark with `getBookmarkForTime(at)`, applies it with
+   `onNextSessionRestoreBookmark` and restarts; `dryRun: true` returns the bookmark and changes nothing. The admin.mjs
+   command `tenant:pitr --product cafe --tenant tnt_… --at <ISO time> [--dry-run]` calls it (`tenant:restore` already
+   means un-suspend).
+5. Tests: signature failures (stale, bad signature, unknown key, missing header), idempotent replay, licence mismatch
    (422), status transitions with fixed dates in `Africa/Casablanca`, a device in read-only that cannot open a shift but
    finishes an open one (Playwright with `page.clock`).
 
@@ -35,6 +42,9 @@ throwaway keys).
    → suspend → restore → owner reset → report, each with its HTTP status.
 2. The Playwright status test output.
 3. `ls -l ~/.brandhub/keys` (permissions only, no content) and `npm run gate`.
+4. `node tools/admin.mjs tenant:pitr --product cafe --tenant <demo tenant> --at <one hour ago> --base <staging URL>`:
+   its HTTP status and the bookmark used. If staging is not available yet: the same command with `--dry-run` (it prints
+   the bookmark and changes nothing), and STATUS says the real restore has not run.
 
 ## Update docs/STATUS.md
 Row 07; key ids in use; where the public keys are set (names only).

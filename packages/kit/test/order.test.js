@@ -1,3 +1,4 @@
+// @ts-check
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { applyOrderEvent, dosesSold, foldOrder, OrderRuleError, paymentsByTender } from "../src/order.js";
@@ -33,6 +34,7 @@ function script(orderId = "ord_1", device = TILL) {
   return { add, drop, events };
 }
 
+/** @param {string} lineId @param {number} [qtyMilli] */
 const coffee = (lineId, qtyMilli = 1000) => ({
   lineId,
   productId: "prd_noir",
@@ -44,6 +46,7 @@ const coffee = (lineId, qtyMilli = 1000) => ({
   station: "bar",
 });
 
+/** @param {string} lineId */
 const msemen = (lineId) => ({
   lineId,
   productId: "prd_msemen",
@@ -54,7 +57,7 @@ const msemen = (lineId) => ({
   station: "kitchen",
 });
 
-/** @param {Function} fn @param {string} code */
+/** @param {() => unknown} fn @param {string} code */
 function throwsCode(fn, code) {
   assert.throws(fn, (e) => e instanceof OrderRuleError && e.code === code);
 }
@@ -329,6 +332,7 @@ test("a move never takes more than what is left after payments, and checks its l
   s.add("line.added", coffee("lin_2"));
   s.add("payment.added", { paymentId: "pay_1", tender: "cash", amountCentimes: 1500, bankId: "bnk_till" });
   const o = foldOrder(s.events);
+  /** @param {string} type @param {Record<string, any>} data */
   const next = (type, data) => ({ id: uuidv7(T0 + 50_000), type, entity: "ord_x", seq: o.seq + 1, device: TILL, staff: "stf_ali", at: T0 + 50_000, data });
   throwsCode(() => applyOrderEvent(o, next("lines.moved_out", { moveId: "mv_2", toOrderId: "ord_y", lineIds: ["lin_2"] })), "E_OVERPAID");
   throwsCode(() => applyOrderEvent(o, next("lines.moved_out", { moveId: "mv_2", toOrderId: "ord_y", lineIds: ["lin_9"] })), "E_LINE_UNKNOWN");

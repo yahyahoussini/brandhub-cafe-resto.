@@ -68,8 +68,9 @@ dashboard and write the real per-message price in STATUS.
 
 ## 8. Backups and restore
 - Point-in-time recovery: each TenantStore can restore its SQLite to any moment of the last 30 days. The admin-only
-  endpoint `POST /api/admin/restore {tenantId, at}` (command-key signed) takes a bookmark with `getBookmarkForTime` and
-  applies it with `onNextSessionRestoreBookmark`, then restarts the object.
+  endpoint `POST /api/admin/restore {tenantId, at, dryRun?}` (command-key signed) takes a bookmark with
+  `getBookmarkForTime` and applies it with `onNextSessionRestoreBookmark`, then restarts the object; `dryRun: true`
+  returns the bookmark and changes nothing. `node tools/admin.mjs tenant:pitr` calls it (prompt 07).
 - Nightly export (02:30 UTC cron): each client's new events, encrypted with `EXPORT_KEY`, to
   `r2://brandhub-<product>-files/exports/<tenant>/<date>.jsonl.enc`, kept 10 years.
 - Restore drill before every pilot: restore the demo tenant to one hour earlier, check the day's totals, time it, write it
@@ -85,5 +86,8 @@ only: never edit an applied migration; a bad projection is rebuilt from events. 
 from R2; its SQLite stays.
 
 ## 11. Yearly
-Rotate the command and licence keys (new kid, both accepted for a month), `DATA_KEY` only after an incident (re-encrypt),
-check the WhatsApp price, renew the code-signing certificate if bought.
+Rotate the command key (new kid, both accepted for a month). Rotate the licence key in this order, so a 12-month
+licence never outlives its key: (1) publish the new public key in an app build and in `LICENCE_PUBLIC_KEYS` first;
+(2) during the month both kids are accepted, re-sign every live licence with the new key, same plan, limits and dates
+(`tenant:subscription`, the control API's licence issue call, docs/09 §1 #2); (3) only then drop the old kid.
+`DATA_KEY` only after an incident (re-encrypt), check the WhatsApp price, renew the code-signing certificate if bought.

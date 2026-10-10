@@ -14,6 +14,8 @@ The contract is the Master Spec's (section "Control API v1"); both products impl
 | 6 | `GET /api/control/v1/health` | — | product, version, build, time, status |
 A new tenant has no licence until endpoint 2 runs: it can log in and set up, but no shift can open. The test sequence is
 create → set subscription → suspend → restore → owner reset → report.
+Outside the contract, one maintenance endpoint uses the same signature and request ids (§3): `POST /api/admin/restore
+{tenantId, at, dryRun?}`, the point-in-time restore of one tenant's Durable Object (D28, D49, docs/12 §8).
 
 ## 2. Bodies
 **1 · Create**
@@ -77,6 +79,7 @@ node tools/admin.mjs tenant:subscription --product cafe --tenant tnt_… --plan 
 node tools/admin.mjs tenant:suspend --product cafe --tenant tnt_… --reason "…"
 node tools/admin.mjs tenant:restore --product cafe --tenant tnt_… --reason "…"
 node tools/admin.mjs tenant:owner-reset --product cafe --tenant tnt_…
+node tools/admin.mjs tenant:pitr --product cafe --tenant tnt_… --at <ISO time> [--dry-run]   # POST /api/admin/restore
 node tools/admin.mjs report --product cafe [--tenant tnt_…]
 node tools/admin.mjs health --product resto
 node tools/admin.mjs test-sequence --product cafe --base https://<staging host>

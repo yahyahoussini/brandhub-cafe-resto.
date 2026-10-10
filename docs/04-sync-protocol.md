@@ -59,7 +59,8 @@ the cloud; with neither, it queues. The cloud's TenantStore is the authority: it
 ## 5. Dead letters
 A rejected event is never edited or re-sent. The device shows the manager "À vérifier (N)" with the code in plain
 words; the back office lists them with the event's content. Resolutions are new events (for example a new order entered
-by the manager with the note "reprise ticket refusé") and `deadletter.resolved {id, how}` marks the item done.
+by the manager with the note "reprise ticket refusé") and `deadletter.resolved {how, note}`, whose entity is the
+rejected event's id (docs/03 §5), marks the item done.
 Common codes: `E_NOT_OWNER` (a device wrote after a take-over), `E_DEVICE_REVOKED`, `E_SEQ` (a gap after a crash),
 `E_OVERPAID`, `E_BAD_DATA`.
 
@@ -106,7 +107,7 @@ At pairing, request persistent storage (`navigator.storage.persist()`) so Chrome
   signal, shown with the amount. "Remettre ma caisse" is refused while the phone still owns open orders: it transfers or
   closes them first.
 - **Revoked while offline:** events with `at` before the revocation time are accepted and flagged; later ones are rejected.
-- **Reset device:** re-pairing abandons the rest of its receipt block (§4 of docs/03) and starts a new outbox; anything
+- **Reset device:** re-pairing abandons the rest of its receipt block (§7 of docs/03) and starts a new outbox; anything
   not pushed before the reset is lost and the manager sees the gap in the block report.
 - **Catalog changed while a till is offline:** the till keeps selling at its prices; each line keeps its price snapshot.
 

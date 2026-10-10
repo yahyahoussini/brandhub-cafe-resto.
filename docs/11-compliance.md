@@ -85,10 +85,11 @@ Sales events and Z reports: 10 years (4 Sep plan, **to confirm** with the accoun
 1. Takeaway and delivery VAT rates. 2. Minimum mentions on consumer tickets. 3. Buyer's ICE on B2B invoices. 4. Retention
 period. 5. Who files the CNDP transfer formality; the DPA and privacy texts. 6. Débit-de-boissons liability for
 restaurants. 7. The e-invoicing phase of each client that issues B2B invoices.
+Before Café V1.1 (prompts 21–26): 11. Whether WhatsApp messages to a client's customers may be sent from BrandHub's
+number (Meta's opt-in rules); if not, they go by click-to-chat from the client's phone.
 Before Resto V1.1 (prompts 37–40): 8. The oral consent text read to a customer on the phone. 9. What an online order page
 must show before the order (Law 31-08 on distance selling). 10. VAT when a deposit is received, and on a deposit kept
-after a no-show; the VAT rate of the delivery fee. 11. Whether WhatsApp messages to a client's customers may be sent
-from BrandHub's number (Meta's opt-in rules); if not, they go by click-to-chat from the client's phone.
+after a no-show; the VAT rate of the delivery fee.
 Before V2 and the digital receipt: 12. Whether a digital receipt (QR link, kept 90 days) may replace the paper ticket when
 the customer asks (Law 31-08 art. 4). 13. The client's CNDP formality for video surveillance when the camera link puts
 ticket text and staff first names on the recordings (prompt 42).

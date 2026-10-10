@@ -35,11 +35,18 @@ cause and fix. Fixes only for two weeks: no new feature on a pilot's version. Co
 paper count for the first 5 days (capture rate).
 
 ## 5. What we measure (Gate 2, D48)
+Gate 2 (15 Jan 2027) needs pilot 1 to run 5 weeks and meet these three targets (D48):
+
 | Measure | Target |
 |---|---|
 | Sales captured vs the paper count | ≥ 95 % |
 | Payments lost | 0 |
 | Support time | ≤ 6 h a week |
+
+Also watched; these do not decide Gate 2:
+
+| Measure | Target |
+|---|---|
 | Median sync delay online | < 10 s |
 | Dead letters open for more than 48 h | 0 |
 | Owner reads the evening report | ≥ 5 evenings of 7 |

@@ -1,8 +1,10 @@
+// @ts-check
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { chainHash, GENESIS, verifyChain } from "../src/journal.js";
 import { canonicalJson } from "../src/crypto.js";
 
+/** @param {number} n */
 async function chain(n) {
   const out = [];
   let prev = GENESIS;

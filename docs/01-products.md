@@ -96,7 +96,7 @@ Module keys are what the licence switches on (`modules` in the licence, D27). A 
 | `extra_till` | both | `tills +1` | 49 MAD/month |
 | `pilot_cafe`, `pilot_resto` | Café, Resto | the same numbers as `cafe`, `resto` | free for 3 months |
 Staff users are unlimited. Every plan lists every limit key (a missing key means 0). The device list refuses a pairing
-above the limit and names the limit reached.
+above the limit and names the limit reached. A limit of 99 in `data/plans.json` means unlimited (D7).
 
 ## 6. Café acceptance day
 Prompt 19's end-to-end test replays this day on the demo account and checks every number. Demo prices (not a

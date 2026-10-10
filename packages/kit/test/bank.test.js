@@ -1,3 +1,4 @@
+// @ts-check
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { applyBankEvent, assertBankAccepts, BankRuleError, cashVariance, doseAlert, doseVariance, expectedCash } from "../src/bank.js";
@@ -8,7 +9,13 @@ const T0 = Date.UTC(2026, 10, 30, 7, 0, 0);
 function bankScript(device = "dev_till") {
   let seq = 0;
   let at = T0;
+  /** @type {any[]} */
   const events = [];
+  /**
+   * @param {string} type
+   * @param {Record<string, any>} [data]
+   * @param {{ device?: string }} [o]
+   */
   const add = (type, data = {}, o = {}) => {
     seq += 1;
     at += 60_000;
@@ -24,6 +31,7 @@ function bankScript(device = "dev_till") {
   return { add, drop, events, fold };
 }
 
+/** @param {() => unknown} fn @param {string} c */
 const code = (fn, c) => assert.throws(fn, (e) => e instanceof BankRuleError && e.code === c);
 
 test("a till shift: float, cash sales, a paid-out, blind count, close", () => {

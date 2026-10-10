@@ -1,9 +1,11 @@
+// @ts-check
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { accessStatus, hasModule, signLicence, tillPermissions, trustedNow, verifyLicence } from "../src/licence.js";
 import { generateSigningKeys } from "../src/crypto.js";
 import { zonedToUtc } from "../src/timezone.js";
 
+/** @type {import("../src/licence.js").LicencePayload} */
 const base = {
   v: 1,
   kid: "lic-2026",
@@ -49,6 +51,7 @@ test("rotation: the device accepts the old and the new key during the switch", a
 });
 
 test("status follows the dates in Casablanca time", () => {
+  /** @param {number} y @param {number} m @param {number} d @param {number} [h] */
   const at = (y, m, d, h = 12) => zonedToUtc(y, m, d, h, 0);
   assert.equal(accessStatus(base, at(2026, 12, 31, 23)), "active");
   assert.equal(accessStatus(base, at(2027, 1, 1, 0)), "grace");

@@ -8,7 +8,7 @@
 | 4 | Switch Cloudflare to Workers Paid ($5/month) | prompt 04 | Cloudflare dashboard | 5 min |
 | 5 | Run `node tools/admin.mjs keys:generate` and paste the public keys as secrets | prompt 07 | your computer, Wrangler | 15 min |
 | 6 | Buy or borrow the reference kit for testing (tablet, 80 mm printer USB or Ethernet, drawer, mini-PC if waiters) | prompt 09 (12 Oct) | your desk | 1–2 h |
-| 7 | Pilot 1's menu with prices, legal identity (ICE, IF, RC, patente, CNSS) and the VAT answer from their accountant | prompt 11 (26 Oct) | onboarding of the pilot tenant | 1 h |
+| 7 | Pilot 1's menu with prices, legal identity (ICE, IF, RC, patente, CNSS), and from their accountant the VAT answer and the minimum mentions on consumer tickets (docs/11 §11 item 2) | prompt 11 (26 Oct) | onboarding of the pilot tenant; `docs/11-compliance.md §1` | 1 h |
 | 8 | Meta Business verification and a WhatsApp Business number for reports; submit the template | prompt 18 (9 Nov) | Meta Business Suite | 1 h + waiting |
 | 9 | Review the Darija text of the evening report (`data/evening-report.json`) | prompt 18 | the file | 15 min |
 | 10 | CGU, DPA and privacy texts reviewed by a lawyer (French and Arabic) | prompt 20 (27 Nov) | `apps/*/web/legal/` | lawyer |
@@ -29,3 +29,7 @@
 | 25 | A Sunmi or iMin till, only if prompt 09 recorded a printing failure on it and a client needs it | prompt 45 | your desk | — |
 | 26 | Check whether the DGI has published the e-invoicing decree and technical specifications | prompt 46, and when a client enters its phase | DGI site, the client's accountant | 30 min |
 | 27 | Resto pilot: agreement signed (FR/AR) and the Resto versions of the CGU, DPA and privacy texts if they differ | prompt 36 (2 Apr 2027) | paper, `apps/resto/web/legal/` | lawyer |
+| 28 | Accountant: the retention period of sales events and Z reports (docs/11 §11 item 4) | prompt 22 | `docs/11-compliance.md §10`, `DECISIONS.md` D43 | — |
+| 29 | Accountant or lawyer (docs/11 does not say which): whether the buyer's ICE is mandatory on B2B invoices (docs/11 §11 item 3); whether a digital receipt may replace the paper ticket when the customer asks (item 12; a client's digital receipt is switched on only after this answer) | prompt 23 | `docs/11-compliance.md §2, §11` | — |
+| 30 | Accountant of each restaurant client (the Resto pilot first): whether the restaurant is liable to the débit-de-boissons tax (docs/11 §11 item 6) | prompt 35, and at each restaurant's onboarding | setting `taxes.debitDeBoissons` | — |
+| 31 | Lawyer (CNDP formalities are confirmed with a lawyer, docs/11 §8): the client's CNDP formality for video surveillance when the camera link puts ticket text and staff first names on the recordings (docs/11 §11 item 13) | prompt 42 | the camera setup guide (prompt 42) | lawyer |

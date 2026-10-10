@@ -138,7 +138,9 @@ note's reason. Kredi charges are the `credit` tenders of closed orders.
 | `day.closed` | `tnt_…` | `businessDate` (the manager's end-of-day button; triggers "send the report now") |
 | `deadletter.resolved` | the rejected event's id | `how`, `note` (the manager's resolution, docs/04 §5) |
 
-Heartbeats, login attempts and sessions are not events: they live in plain tables (§6) and expire.
+Heartbeats, login attempts and sessions are not events: they live in plain tables (§6) and expire. Heartbeats follow
+the last-writer-wins rule D20 gives marks (a device's latest heartbeat replaces the one before, as its last seen), but
+in the `heartbeats` table, not in the event log.
 
 ## 6. Storage
 **TenantStore (cloud, SQLite in the Durable Object).** Implemented in prompt 04 from `packages/kit-worker/src/schema.sql`:

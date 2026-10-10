@@ -36,7 +36,8 @@ the cloud every 3 s when online. Offline: sells, prints, keeps receipt numbers f
 
 **B. Café with waiters (Station).** Phones and the till push to the Station on the local network; the Station prints the
 bar ticket on the bar printer and relays to the cloud. Offline: everything continues inside the café; the cloud catches
-up when the Station reconnects. Without a Station, waiter phones sync through the cloud and work alone when offline.
+up when the Station reconnects. If the Station is down, phones and the till sync with the cloud directly (D25: a device
+can change hop at any moment); D24 still requires a Station for every café with waiter phones.
 
 **C. Restaurant (Station required).** Handhelds send orders to the Station; the Station prints kitchen tickets by station
 and feeds the kitchen screens (long-poll); tills settle bills. The cloud receives everything through the Station.
@@ -112,7 +113,7 @@ the budget checks to `npm run gate`.
 | Station | tablets sell alone and print over USB/Bluetooth if configured; phones sync through the cloud | "Station injoignable" | restart the Station; events relay on return |
 | A tablet dies | other devices; its unsynced events are lost only if never pushed | its orders stay open elsewhere | manager takes over its orders and bank (D20); receipt block rest abandoned |
 | Printer | sales; tickets queue on the Station | "Imprimante hors ligne" | reprint from the queue (counted) |
-| Power | UPS keeps router, Station and printer 30–60 min | — | shutdown order in the pilot playbook |
+| Power | UPS keeps router, Station and printer 30–60 min | — | restart the Station; events relay on return |
 | Cloudflare region | venue fully (local) | back office shows last sync | nothing to do; cloud catches up |
 | admin.brandhub.ma | everything (products keep their own licence copy) | — | admin outbox retries |
 | Device clock wrong | selling | warning; next shift opening needs an online check | trusted clock (D27) |

@@ -9,5 +9,8 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     projects: ["packages/kit-worker", "apps/cafe/worker", "apps/resto/worker"],
+    // Show what passing specs print (the append timing of prompt 04): under an AI agent, Vitest otherwise picks its
+    // minimal reporter, which keeps the console output of failed tests only.
+    silent: false,
   },
 });

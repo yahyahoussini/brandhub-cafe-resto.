@@ -18,6 +18,7 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
 | 01 | Repository scaffold | done | 4 Oct 2026 | Node v22.22.0, npm 10.9.4, TypeScript 5.9.3, ESLint 9.39.5, Prettier 3.9.9, Playwright 1.56.1. `npm ci && npm run gate` passes, 94 tests (kit 75 + `bh/logical-css` 19). Details below. |
 | 02 | Design system, fonts, UI parts, i18n | done | 9 Oct 2026 | `npm run gate` passes, 109 tests. `npm run contrast`: 52/52 used pairs pass. 21 Playwright runs pass (16 style guide, 5 behaviour), no external host. UI kit 10.4 KB gzip (21.7 KB with Preact, signals, Lucide), CSS 5.0 KB, fonts 208 KB. Review fixes in a second commit. Details below. |
 | 03 | Business rules: events, marks, stock, reports, permissions | done | 9 Oct 2026 | `npm run gate` passes, 172 tests (kit 138). The café acceptance day of docs/01 §6 gives every number of the spec. Four bugs of the provided kit fixed after a failing test (prompt 00 findings 1, 2, 8, 9). Review fixes in a second commit. Details below. |
+| 04 | Cloud store: one SQLite database per client | built; staging not run | 10 Oct 2026 | `npm run gate` passes: 229 node tests (kit 144, kit-worker 30), 64 Worker tests in workerd. The café acceptance day pushed to a store gives the kit's report. Append of 200 events: median 71 ms (local workerd). compatibility_date 2026-10-06. Staging (step 5, checks 2–3) not run: no Cloudflare account access here. Details below. |
 
 ## Current state
 - Kit (`packages/kit/src`), 138 unit tests:
@@ -54,6 +55,43 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
   - the clock-skew rule was missing from reports;
   - the average ticket did not include credit notes in revenue;
   - each bank's Z had no ticket series, VAT or Kredi cash line.
+- Cloud store (prompt 04), `packages/kit-worker` and `apps/{cafe,resto}/worker`:
+  - Cloudflare's documentation was read from its public source (`cloudflare/cloudflare-docs` on GitHub):
+    developers.cloudflare.com and api.cloudflare.com are blocked by this environment's network policy. Checked in the
+    local Workers runtime (workerd 1.20261006.1): `PRAGMA user_version` is refused (`SQLITE_AUTH`), so the schema version
+    is in a `_schema` table; `transactionSync` rolls back on a throw; `jurisdiction("eu")` is not implemented locally.
+  - Modules: `schema.sql` (docs/03 §6, every table STRICT, the event log refuses UPDATE and DELETE), `migrations.js` +
+    `migrate.js` (a node test pins each migration's hash and checks it equals `schema.sql`), `store.js` (append, pull,
+    verify, rebuild, day report; runs on workerd and on `node:sqlite`), `sync-rules.js` (the push checks of docs/04 §2),
+    `projections.js`, `tenant-store.js` (the Durable Object), `jurisdiction.js`, `http.js` (docs/08 §7 headers, JSON
+    errors), `env.js`. The registry (D1): `migrations/registry/0001_registry.sql`, five STRICT tables, no email in clear
+    (`owner_logins.email_hmac`).
+  - `append(events, caller)`: checks of docs/04 §2 plus those docs/04 §2 now lists; chain hashes computed under an
+    in-memory lock (Durable Object input gates do not cover `crypto.subtle` awaits), then one `transactionSync` writes
+    rows, hashes and projections. Rejections go to `deadletter`; a whole batch over 200 events or 512 KB is refused before
+    anything is stored.
+  - `jurisdictionStore(env, tenantId)` always asks `env.STORE.jurisdiction("eu")`; only local workerd's "not implemented"
+    error with `ENVIRONMENT` `local` falls back to the plain namespace. A lint rule (`bh/store-through-jurisdiction`)
+    refuses any other read of `env.STORE`.
+  - Workers: `/api/health` (product, version, build = Worker version id, time), 404/405/500 JSON codes (docs/03 §9),
+    the docs/08 §7 headers on every response (relaxed only for `ENVIRONMENT` `local`), `_headers` for static routes, an
+    empty `scheduled()` for the two crons. `wrangler.jsonc` per docs/02 §4 with `staging` and `production` (production
+    routes, D1 and R2 commented until prompts 20 and 36). Worker bundle 160 KiB, 40.8 KiB gzip (not on the till route).
+  - `npm run dev:cafe` / `dev:resto` (ports 8787 / 8788): build the PWA, apply the registry migrations locally,
+    `wrangler dev`. `node tools/scripts/staging.mjs` prints the staging commands for Yahya; it runs nothing.
+  - Kit additions in `order.js` (tests in `packages/kit/test/cross-aggregate.test.js`): `lineAmounts` (computeTotals
+    uses it, same results), `assertRefundWithin`, `assertMovePair`; table, zone, station and category must be short texts
+    or null (an object would have broken the store's STRICT insert). The acceptance day's events moved to
+    `packages/kit/test/acceptance-day-events.js`, shared by the kit test and the Worker test (assertions unchanged).
+  - New error codes (docs/03 §9): `E_UNKNOWN_DEVICE`, `E_WRONG_DEVICE`, `E_DUP_RECEIPT`, `E_SCHEMA_NEWER`, `E_NOT_FOUND`,
+    `E_METHOD`, `E_INTERNAL`. docs/03 §6 records the storage as built, docs/04 §2 the extra checks, docs/12 §2 the
+    staging commands (`--env staging` on secrets, `--no-x-provision`, registry migrations, PWA build).
+  - Deviations from the prompt: the runtime version table instead of `PRAGMA user_version` (refused by the platform);
+    `@cloudflare/vitest-plugin` (renamed `vitest-pool-workers`); Durable Object `migrations` kept as docs/02 §4 says
+    (Cloudflare now also offers a declarative `exports` map; the two cannot be mixed).
+  - Dependencies (dev only, 0 KB on the till route): `wrangler` 4.149.0, `vitest` 5.0.3, `@cloudflare/vitest-plugin`
+    1.4.0, `@cloudflare/workers-types`. npm 10.9 crashes resolving vitest 4.1 (`edgesOut`); vitest 5 installs cleanly.
+  - R2 free tier confirmed: 10 GB-month per month, Standard storage only (Cloudflare's R2 pricing source).
 - Apps: no screen yet. Workspaces (prompt 01): `@brandhub/kit-web`, `@brandhub/kit-worker`, `@brandhub/cafe-worker`,
   `@brandhub/cafe-web`, `@brandhub/resto-worker`, `@brandhub/resto-web`, `@brandhub/station`, `@brandhub/tools`. The
   two web apps serve only the dev style guide (prompt 02); the Workers and the Station have no source yet.
@@ -271,6 +309,23 @@ evening-report template has no dead-letter variable (before prompt 18).
 - `dev:cafe`, `dev:resto`, `dev:station` (CLAUDE.md "Commands") need Wrangler, Vite and Electron. Prompts 04, 02/11
   and 08 add them with those tools.
 
+**Cloud store (prompt 04)**
+- Staging not created (prompt 04 step 5, acceptance checks 2 and 3 not run): this container has no Cloudflare account
+  access and the environment's network policy blocks api.cloudflare.com. Needed: Workers Paid on the brandhub.ma account
+  (task 4), then on Yahya's computer `npx wrangler login` and the commands of `node tools/scripts/staging.mjs`; paste
+  the outputs (health JSON, D1 and R2 jurisdiction) here. Or: allow api.cloudflare.com in this environment's network
+  settings and add a Cloudflare API token as an environment secret, and Claude Code runs them. No staging URL yet.
+- Not verified: whether `wrangler d1 info --json` shows the jurisdiction (if not, the dashboard's data location does).
+- docs/04 §9: a device revoked while offline has its earlier events accepted "and flagged"; the event columns are fixed,
+  so there is no flag yet. Decide where it lives (a column through a migration, a table, or a dead-letter category) before
+  prompt 06/19.
+- The store uses `Africa/Casablanca`; the registry's per-client `time_zone` is not passed to it yet (prompt 05/07).
+- `approvedBy` is not yet checked against staff who may approve (prompt 05).
+- At pilot scale only: stock levels recompute over every closed order (incremental in prompt 16); `rebuild()` runs in
+  one transaction (may approach the Durable Object CPU limit on a very large log).
+- After a change of `hours.businessDayCutoff`, `sales_lines` rows near the boundary keep their old business date (the
+  day report selects by `business_at` and is right).
+
 **Design system (prompt 02)**: Yahya decides; the design system file is docs/07.
 - docs/07 has no dark value for `--bh-brand-ink`, `--bh-mid`, `--bh-ok-soft`, `--bh-warn-soft`, `--bh-danger-soft`.
   Until it does, dark mode points them at existing tokens: `--bh-brand`, `--bh-text-3` (so a disabled border is quieter
@@ -333,7 +388,6 @@ To confirm (from docs/11 §11, data flags and Darija drafts). Who confirms → n
   `sunmi_inner`; reference kits and their prices.
 
 **Others**
-- R2 free tier "10 GB" → Claude Code checks in prompt 04 (docs/02:99).
 - Hikvision/Dahua POS protocol fields → prompt 42 (task 24); Glovo API version → prompt 43 (task 18).
 - Suggested dose quantities (`cafe.json`, 15 entries) → the café owner; recipe quantities (`resto.json`, 7) → the
   Resto chef (task 17).

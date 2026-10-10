@@ -15,12 +15,18 @@ Turn on two-step verification everywhere.
 Per product (`cafe`, then `resto`):
 ```bash
 npx wrangler d1 create brandhub-cafe-registry --jurisdiction eu   # the jurisdiction is fixed at creation
-npx wrangler deploy -c apps/cafe/worker/wrangler.jsonc --env staging   # creates the Durable Object class via migrations
+# put the printed database_id into env.staging.d1_databases of apps/cafe/worker/wrangler.jsonc, then:
+npx wrangler d1 migrations apply brandhub-cafe-registry --remote -c apps/cafe/worker/wrangler.jsonc --env staging
+node tools/scripts/build-web.mjs cafe
+npx wrangler deploy -c apps/cafe/worker/wrangler.jsonc --env staging --no-x-provision   # creates the Durable Object class via migrations
 ```
+`node tools/scripts/staging.mjs` prints these commands for both products (it runs nothing). Create the D1 first:
+Wrangler 4.149 creates a missing D1 by itself at deploy, without a jurisdiction; `--no-x-provision` stops that.
 R2: create `brandhub-cafe-files` in the EU jurisdiction (dashboard → R2 → Create bucket → Specify jurisdiction → EU, or
 `npx wrangler r2 bucket create … --jurisdiction eu` if the installed Wrangler offers the flag) and declare
 `"jurisdiction": "eu"` in the binding. Record in STATUS where each resource lives.
-Secrets (`npx wrangler secret put <NAME> -c apps/cafe/worker/wrangler.jsonc`): `CONTROL_PUBLIC_KEYS`,
+Secrets (`npx wrangler secret put <NAME> -c apps/cafe/worker/wrangler.jsonc --env staging`; without `--env` the secret
+goes to the top-level Worker, which carries the production name): `CONTROL_PUBLIC_KEYS`,
 `LICENCE_PUBLIC_KEYS`, `DATA_KEY`, `EXPORT_KEY`, `WHATSAPP_TOKEN`, `RESEND_API_KEY`. Values never appear in the terminal
 history: paste them when Wrangler asks.
 

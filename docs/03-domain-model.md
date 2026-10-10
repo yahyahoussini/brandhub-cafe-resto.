@@ -169,6 +169,20 @@ Non-event tables: `owners` (email, PBKDF2 hash, salt, iterations, TOTP secret en
 `activations` (token hash, code hash, expiry, used), `licence` (token, payload, status), `messages` (channel, kind,
 recipient hash, status, count), `auth_log` (90 days), `heartbeats`, and the personal-data tables below.
 
+As built in prompt 04 (`packages/kit-worker/src/schema.sql`, `store.js`, `projections.js`):
+- Every table is `STRICT`; triggers refuse `UPDATE` and `DELETE` on `events` (D20). The schema version is kept in
+  `_schema` (one row): the Durable Object refuses `PRAGMA user_version` (`SQLITE_AUTH`). Migrations are applied in one
+  transaction at start; a database newer than the code is refused (`E_SCHEMA_NEWER`).
+- A token hash never sits in a projection (projections are rebuilt from the log): `devices` is the `device.set`
+  projection (kind, receipt prefix, data); `device_access` (outside the log) holds the token hash, paired and revoked
+  times; last seen and app version are in `heartbeats`.
+- Extra projection tables: `catalog_availability`, `staff_pins`, `table_marks` (one table per mark type, so two types
+  on one entity never overwrite each other), `days_closed`, `projection_state`.
+- `orders` and `banks` keep `business_at` (the instant that decides the business day: `recvAt` for a clock-skewed
+  event, `at` otherwise). `daily` holds the full day report (`buildDay`) and is recomputed when a day is read after a
+  push marked it dirty; `stock_levels` likewise. A change of `hours.businessDayCutoff` or `reports.thresholds` marks every
+  day dirty.
+
 **Personal data lives outside the log.** Events never carry a name, a phone number or an address: they carry `cus_…` or
 `stf_…`. `customers_pii` (per `cus_…`: name, phone and addresses encrypted with `DATA_KEY`, the phone's keyed hash, the
 consent record with its text version, time and staff) and `staff_pii` (a staff member's phone for statements, with his
@@ -236,7 +250,12 @@ The kit throws `OrderRuleError` / `BankRuleError` / `EventError` with a `code` (
 `E_LINE_SENT`, `E_LINE_VOIDED`, `E_NOT_HELD`, `E_DUP_LINE`, `E_DUP_PAYMENT`, `E_PAYMENT_UNKNOWN`, `E_PAYMENT_VOIDED`,
 `E_APPROVAL_REQUIRED`, `E_OVERPAID`, `E_TENDERED_LOW`, `E_NOT_PAID`, `E_HAS_PAYMENTS`, `E_EMPTY`, `E_REFUND_SIGN`,
 `E_LINE_MOVED`, `E_BANK_UNKNOWN`, `E_BANK_CLOSED`; sync-level codes (docs/04): `E_SEQ_BLOCKED`, `E_DEVICE_REVOKED`,
-`E_FORBIDDEN_TYPE`, `E_TOO_LARGE`, `E_UNKNOWN_STAFF`, `E_MOVE_PAIR`, `E_REFUND_EXCEEDS`; HTTP-level codes of the
-product Workers' `/api/*` (prompt 04, body `{ "code": "E_…" }`): `E_NOT_FOUND` (404, unknown path), `E_METHOD` (405,
-known path with another method, `Allow` header), `E_INTERNAL` (500, unexpected error; the log names the route and the
-error's class, never its message).
+`E_FORBIDDEN_TYPE`, `E_TOO_LARGE` (an event's data over 16 KB, or a whole push over 200 events or 512 KB, refused
+before any event is stored), `E_UNKNOWN_STAFF`, `E_MOVE_PAIR`, `E_REFUND_EXCEEDS`, `E_UNKNOWN_DEVICE` (the event's
+device, or the relaying Station, is not in the client's device directory), `E_WRONG_DEVICE` (an event signed by
+another device than the caller, which is not the client's Station relaying it; or a caller whose kind is not its
+device's), `E_DUP_RECEIPT` (a receipt number already used by another order of the client); store-level code (prompt 04):
+`E_SCHEMA_NEWER` (the client's database was migrated by newer code; the store refuses to start, roll forward);
+HTTP-level codes of the product Workers' `/api/*` (prompt 04, body `{ "code": "E_…" }`): `E_NOT_FOUND` (404, unknown
+path), `E_METHOD` (405, known path with another method, `Allow` header), `E_INTERNAL` (500, unexpected error; the log
+names the route and the error's class, never its message).

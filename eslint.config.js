@@ -1,7 +1,11 @@
 // @ts-check
 import js from "@eslint/js";
 import globals from "globals";
-import bh from "./tools/eslint/logical-css.js";
+import logicalCssPlugin from "./tools/eslint/logical-css.js";
+import { storeThroughJurisdiction } from "./tools/eslint/store-jurisdiction.js";
+
+/** The repository's own rules (tools/eslint). */
+const bh = { rules: { ...logicalCssPlugin.rules, "store-through-jurisdiction": storeThroughJurisdiction } };
 
 /**
  * Imports that would join the two products (D1) or reach into a package by path instead of by name.
@@ -142,6 +146,12 @@ export default [
     files: ["packages/kit-worker/**", "apps/*/worker/**"],
     languageOptions: { globals: { ...globals.serviceworker, WebSocketPair: "readonly", HTMLRewriter: "readonly" } },
     rules: { "no-console": ["error", { allow: ["warn", "error"] }] },
+  },
+  // A client's store is reached only through jurisdictionStore, in the EU jurisdiction (D19, docs/02 §4).
+  {
+    files: ["apps/*/worker/src/**", "packages/kit-worker/src/**"],
+    ignores: ["packages/kit-worker/src/jurisdiction.js"],
+    rules: { "bh/store-through-jurisdiction": "error" },
   },
   // Node code: tools, tests and build configs (vite.config.js, wrangler and playwright configs run on Node).
   {

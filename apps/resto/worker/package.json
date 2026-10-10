@@ -5,6 +5,7 @@
   "type": "module",
   "description": "BrandHub Resto Worker and RestoStore Durable Object (resto.brandhub.ma).",
   "dependencies": {
+    "@brandhub/kit": "0.1.0",
     "@brandhub/kit-worker": "0.0.0"
   }
 }

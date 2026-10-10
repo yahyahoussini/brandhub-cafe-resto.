@@ -200,6 +200,19 @@ function requireString(v, what) {
 }
 
 /**
+ * An optional id or key (table, zone, station, category): a text of at most 64 characters, or null ("" is null).
+ * Anything else (a number, an object) would reach every store's projections as is, so it is refused here.
+ * @param {unknown} v
+ * @param {string} what
+ * @returns {string | null}
+ */
+function optionalString(v, what) {
+  if (v === undefined || v === null || v === "") return null;
+  if (typeof v !== "string" || v.length > 64) throw fail("E_BAD_DATA", `${what} must be a short text or null`);
+  return v;
+}
+
+/**
  * @param {unknown} name
  * @returns {{ fr: string, ar: string }}
  */
@@ -230,27 +243,51 @@ function unitWithModifiers(l) {
 }
 
 /**
- * @param {OrderState} s
- * @returns {Totals}
+ * @typedef {object} LineAmount one active line's share of its order (docs/03 §3)
+ * @property {Line} line
+ * @property {number} totalCentimes the line's TTC total before the order discount
+ * @property {number} discountCentimes its part of the order discount (largest remainder over the active lines)
+ * @property {number} netCentimes TTC after the discount
+ * @property {number} vatCentimes the VAT in netCentimes, at the line's rate
  */
-export function computeTotals(s) {
+
+/**
+ * The amounts of each active line, in line order: the order discount spread by largest remainder, then each line's
+ * VAT (D21). `computeTotals` adds these rows up, so a per-line projection (the cloud's sales_lines) always sums to the
+ * order's totals and VAT rows.
+ * @param {OrderState} s
+ * @returns {LineAmount[]}
+ */
+export function lineAmounts(s) {
   const active = s.lines.filter(isActiveLine);
   const lineTotals = active.map((l) => l.totalCentimes);
   const gross = lineTotals.reduce((a, b) => a + b, 0);
   let discount = 0;
   if (s.discount && gross > 0) discount = discountAmount(gross, s.discount);
   const allocated = discount > 0 ? allocate(discount, lineTotals) : lineTotals.map(() => 0);
+  return active.map((line, i) => {
+    const net = line.totalCentimes - allocated[i];
+    return { line, totalCentimes: line.totalCentimes, discountCentimes: allocated[i], netCentimes: net, vatCentimes: vatIncluded(net, line.vatBp) };
+  });
+}
+
+/**
+ * @param {OrderState} s
+ * @returns {Totals}
+ */
+export function computeTotals(s) {
+  const parts = lineAmounts(s);
+  const gross = parts.reduce((a, p) => a + p.totalCentimes, 0);
+  const discount = parts.reduce((a, p) => a + p.discountCentimes, 0);
   /** @type {Map<number, { rateBp: number, ttcCentimes: number, vatCentimes: number, baseCentimes: number }>} */
   const byRate = new Map();
-  active.forEach((l, i) => {
-    const net = l.totalCentimes - allocated[i];
-    const vat = vatIncluded(net, l.vatBp);
-    const r = byRate.get(l.vatBp) ?? { rateBp: l.vatBp, ttcCentimes: 0, vatCentimes: 0, baseCentimes: 0 };
-    r.ttcCentimes += net;
-    r.vatCentimes += vat;
-    r.baseCentimes += net - vat;
-    byRate.set(l.vatBp, r);
-  });
+  for (const p of parts) {
+    const r = byRate.get(p.line.vatBp) ?? { rateBp: p.line.vatBp, ttcCentimes: 0, vatCentimes: 0, baseCentimes: 0 };
+    r.ttcCentimes += p.netCentimes;
+    r.vatCentimes += p.vatCentimes;
+    r.baseCentimes += p.netCentimes - p.vatCentimes;
+    byRate.set(p.line.vatBp, r);
+  }
   const total = gross - discount;
   const paid = s.payments.filter((p) => !p.voided).reduce((a, p) => a + p.amountCentimes, 0);
   return {
@@ -329,8 +366,8 @@ function buildLine(d, refund) {
     qtyMilli: d.qtyMilli,
     vatBp: d.vatBp,
     modifiers,
-    station: d.station ?? null,
-    category: d.category ?? null,
+    station: optionalString(d.station, "station"),
+    category: optionalString(d.category, "category"),
     doses,
     note: typeof d.note === "string" ? d.note.slice(0, 200) : "",
     seat,
@@ -381,8 +418,8 @@ function opened(ev) {
     id: ev.entity,
     status: "open",
     mode,
-    tableId: d.tableId ?? null,
-    zoneId: d.zoneId ?? null,
+    tableId: optionalString(d.tableId, "tableId"),
+    zoneId: optionalString(d.zoneId, "zoneId"),
     covers,
     owner: ev.device,
     openedAt: ev.at,
@@ -501,8 +538,8 @@ export function applyOrderEvent(state, ev) {
     }
     case "order.moved": {
       requireOpen(s);
-      s.tableId = d.tableId ?? null;
-      s.zoneId = d.zoneId ?? null;
+      s.tableId = optionalString(d.tableId, "tableId");
+      s.zoneId = optionalString(d.zoneId, "zoneId");
       if (s.tableId && s.mode === "counter") s.mode = "table";
       break;
     }
@@ -666,6 +703,79 @@ export function foldOrder(events) {
   let s = null;
   for (const ev of sorted) s = applyOrderEvent(s, ev);
   return /** @type {OrderState} */ (s);
+}
+
+/**
+ * Cross-aggregate rule of docs/04 §2 (E_REFUND_EXCEEDS): a credit note never refunds more than what is left of its
+ * ticket. The device, the Station and the cloud run it after each event of a credit note, with the credit note's new
+ * state. "What is left" is the ticket's total less every credit note of it that is not voided (open ones included,
+ * so two credit notes made at the same time cannot each refund the whole ticket).
+ * The ticket must be the closed sale named by `refundOf` (same receipt number), and TEST and real orders never mix.
+ * @param {OrderState | null} ticket the order named by `creditNote.refundOf.orderId`, null when the store has none
+ * @param {OrderState} creditNote
+ * @param {OrderState[]} others the ticket's other credit notes (any status; the voided ones and this one are skipped)
+ */
+export function assertRefundWithin(ticket, creditNote, others) {
+  const r = creditNote.refundOf;
+  if (r === null) return;
+  if (!ticket || ticket.id !== r.orderId) throw fail("E_REFUND_EXCEEDS", `ticket ${r.orderId} is unknown: nothing to refund`);
+  if (ticket.refundOf !== null) throw fail("E_REFUND_EXCEEDS", "a credit note cannot be refunded");
+  if (ticket.status !== "closed" || ticket.receiptNo !== r.receiptNo) {
+    throw fail("E_REFUND_EXCEEDS", `ticket ${r.orderId} is not closed under receipt ${r.receiptNo}`);
+  }
+  if (ticket.training !== creditNote.training) throw fail("E_REFUND_EXCEEDS", "TEST and real orders never refund each other");
+  const notes = [creditNote, ...others.filter((o) => o.id !== creditNote.id && o.status !== "voided" && o.refundOf?.orderId === ticket.id)];
+  const refunded = notes.reduce((acc, o) => acc + o.totals.totalCentimes, 0); // credit notes are negative
+  if (ticket.totals.totalCentimes + refunded < 0) {
+    throw fail("E_REFUND_EXCEEDS", `credit notes of ${-refunded} on a ticket of ${ticket.totals.totalCentimes}`);
+  }
+}
+
+/**
+ * @param {Line["modifiers"]} a
+ * @param {unknown} b
+ */
+function sameModifiers(a, b) {
+  if (!Array.isArray(b) || a.length !== b.length) return false;
+  return a.every((m, i) => b[i] && b[i].id === m.id && b[i].priceCentimes === m.priceCentimes);
+}
+
+/**
+ * Cross-aggregate rule of docs/04 §2 (E_MOVE_PAIR): `lines.moved_out` on the source and `lines.moved_in` on the target
+ * are one move. Same `moveId`, written by the same device, each naming the other order, and the target receives
+ * exactly the lines that left the source, unchanged (product, price, options, quantity, rate, doses, sent and held
+ * state): a move never reprices a line. The stores keep both events or refuse both.
+ * @param {OrderEvent} out `lines.moved_out`
+ * @param {OrderEvent} inn `lines.moved_in`
+ * @param {OrderState} source the source order before `out`
+ */
+export function assertMovePair(out, inn, source) {
+  /** @param {string} m */
+  const bad = (m) => fail("E_MOVE_PAIR", m);
+  if (out.type !== "lines.moved_out" || inn.type !== "lines.moved_in") throw bad("a move is lines.moved_out and lines.moved_in");
+  if (typeof out.data.moveId !== "string" || !out.data.moveId || out.data.moveId !== inn.data.moveId) throw bad("the two events of a move share one moveId");
+  if (out.device !== inn.device) throw bad("one device writes both events of a move");
+  if (source.id !== out.entity || out.data.toOrderId !== inn.entity || inn.data.fromOrderId !== out.entity) {
+    throw bad("each event of a move names the other order");
+  }
+  const ids = Array.isArray(out.data.lineIds) ? out.data.lineIds : [];
+  const snaps = Array.isArray(inn.data.lines) ? inn.data.lines : [];
+  if (ids.length === 0 || ids.length !== snaps.length) throw bad("the target receives exactly the lines that left the source");
+  for (const id of ids) {
+    const line = source.lines.find((l) => l.lineId === id);
+    const snap = snaps.find((/** @type {any} */ s) => s && s.lineId === id);
+    if (!line || !snap) throw bad(`line ${id} is not in both events`);
+    const same =
+      snap.productId === line.productId &&
+      snap.unitCentimes === line.unitCentimes &&
+      snap.qtyMilli === line.qtyMilli &&
+      snap.vatBp === line.vatBp &&
+      (snap.doses ?? 0) === line.doses &&
+      snap.sent === line.sent &&
+      snap.held === line.held &&
+      sameModifiers(line.modifiers, snap.modifiers ?? []);
+    if (!same) throw bad(`line ${id} changed on its way to ${inn.entity}`);
+  }
 }
 
 /**

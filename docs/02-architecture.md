@@ -97,7 +97,7 @@ The TenantStore is always reached through `env.STORE.jurisdiction("eu").idFromNa
 | Workers Paid | $5/month minimum, 10 M requests and 30 M CPU-ms included | covers both products |
 | Durable Objects | 1 M requests/month included, then $0.15 per million; 5 GB-month stored included, then $0.20/GB-month; hibernated WebSockets bill no duration | a café makes roughly 5,000–10,000 store requests a day (estimate) |
 | D1 | 25 billion rows read and 50 M written per month included on Paid | registry only |
-| R2 | free tier 10 GB (to confirm in prompt 04) | photos and exports |
+| R2 | free tier 10 GB-month of storage per month, Standard storage only (Cloudflare R2 pricing page source checked 10 Oct 2026) | photos and exports |
 | WhatsApp Cloud API | per message; Morocco's own rate card from 1 Oct 2026, about $0.023 per utility message (reseller figure) | about 7 MAD per owner per month for daily reports |
 | Resend | free tier | fallback email |
 

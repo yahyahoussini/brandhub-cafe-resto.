@@ -12,7 +12,10 @@
     "./http": "./src/http.js",
     "./jurisdiction": "./src/jurisdiction.js",
     "./tenant-store": "./src/tenant-store.js",
-    "./migrate": "./src/migrate.js",
-    "./registry": "./src/registry.js"
+    "./store": "./src/store.js",
+    "./sync-rules": "./src/sync-rules.js",
+    "./projections": "./src/projections.js",
+    "./migrations": "./src/migrations.js",
+    "./migrate": "./src/migrate.js"
   }
 }

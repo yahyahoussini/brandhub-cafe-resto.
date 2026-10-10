@@ -26,6 +26,13 @@ the cloud; with neither, it queues. The cloud's TenantStore is the authority: it
   open; a move is a pair (`lines.moved_out` then `lines.moved_in`, same `moveId`, same batch) stored in one transaction
   or refused together (`E_MOVE_PAIR`); a credit note never refunds more than what is left of its ticket
   (`E_REFUND_EXCEEDS`).
+- Also checked by the cloud store (prompt 04): the event's device is in the client's directory (`device.set`) and not
+  revoked (`E_UNKNOWN_DEVICE`, `E_DEVICE_REVOKED`); the caller signs its own events unless it is the client's Station
+  relaying (`E_WRONG_DEVICE`); a receipt number is used once per client (`E_DUP_RECEIPT`) and belongs to the closing
+  device's series; payment ids are unique across orders (`E_DUP_PAYMENT`); an order is transferred only to a till or
+  phone of the client; tip-pool events are refused (`E_BAD_EVENT`) until prompt 21 builds their rules. A push over 200
+  events or 512 KB is refused whole (`E_TOO_LARGE`, HTTP 413) before anything is stored; the device splits it, never
+  between the two events of a move.
 - A rejected event in a sequenced aggregate blocks that aggregate's later events in the same batch (`E_SEQ_BLOCKED`);
   other aggregates continue.
 - Response:

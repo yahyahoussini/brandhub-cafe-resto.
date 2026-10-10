@@ -7,7 +7,8 @@
  * A pushed batch is handled one event at a time, in the device's order:
  * 1. duplicates (an id already stored, or twice in the batch) are acknowledged, never stored twice; a later copy of an
  *    id refused earlier in the batch is not decided again (the id is rejected once), and a move counts each id once;
- * 2. the envelope (`validateEnvelope`);
+ *    an id refused by an earlier push (it has a dead letter) gets that refusal back, never a new decision (docs/04 §5);
+ * 2. the envelope (`validateEnvelope`), and data at most MAX_DATA_DEPTH levels deep (E_BAD_DATA);
  * 3. a sequenced aggregate whose earlier event was refused in this batch refuses the rest (E_SEQ_BLOCKED);
  * 4. the device and the staff belong to the client: a paired device of the directory (`device.set`, E_UNKNOWN_DEVICE)
  *    not revoked before the event (E_DEVICE_REVOKED), a staff member (`staff.set`) or an owner account (own_…)
@@ -15,7 +16,8 @@
  * 5. the event is signed by the caller, or the caller is the client's Station relaying it (`relayedBy`) (E_WRONG_DEVICE);
  * 6. the type is allowed for the writer's kind (`assertCanWrite`; a relayed event is checked against its device's kind);
  * 7. the kit rule of the aggregate: sequenced events through `applyOrderEvent`/`applyBankEvent` against the current
- *    state (seq must follow), movements through `validateMovement`, marks through `validateMark`;
+ *    state (the writer must hold the aggregate, checked before the seq, E_NOT_OWNER; then seq must follow), movements
+ *    through `validateMovement`, marks through `validateMark`;
  * 8. the cross-aggregate checks: `assertBankAccepts` for `payment.added`, `payment.voided` and cash `kredi.repaid`;
  *    a move is a `lines.moved_out` and a `lines.moved_in` of the same batch, kept or refused together
  *    (`assertMovePair`, E_MOVE_PAIR); a credit note never refunds more than what is left of its ticket
@@ -24,7 +26,7 @@
  *    when it has a prefix (E_BAD_DATA).
  * Accepted events carry `recvAt`, `relayedBy` and `clockSkew` (docs/04 §6); the store then gives them `pos` and hashes.
  */
-import { BANK_EVENT_TYPES, assertBankAccepts } from "@brandhub/kit/bank";
+import { BANK_EVENT_TYPES, BankRuleError, assertBankAccepts } from "@brandhub/kit/bank";
 import {
   CLOUD_DEVICE,
   DEVICE_KINDS,
@@ -39,6 +41,7 @@ import {
 import { isEntityId } from "@brandhub/kit/ids";
 import { validateMark } from "@brandhub/kit/marks";
 import { ORDER_EVENT_TYPES, OrderRuleError, assertMovePair, assertRefundWithin } from "@brandhub/kit/order";
+import { formatReceiptNo } from "@brandhub/kit/receipts";
 import { RECEIPT_NO, reduce } from "./projections.js";
 
 /** @typedef {import("@brandhub/kit/events").EventEnvelope} EventEnvelope */
@@ -52,6 +55,12 @@ export const MAX_BATCH_EVENTS = 200;
 export const MAX_BATCH_BYTES = 512 * 1024;
 /** docs/04 §6: an event more than 5 minutes ahead of the server is flagged. */
 export const CLOCK_SKEW_MS = 5 * 60_000;
+/**
+ * docs/04 §2: an event's data nests at most 32 levels deep. The chain hashes its canonical JSON (crypto.js), which
+ * recurses once per level: deeper data, small enough for the 16 KB limit, would overflow the stack while the batch is
+ * written, an uncoded error that stores nothing.
+ */
+export const MAX_DATA_DEPTH = 32;
 /** docs/04 §3: at most 500 events per pull. */
 export const MAX_PULL = 500;
 /** Paired devices (they write as their own dev_…). */
@@ -131,6 +140,23 @@ export function clockSkewOf(ev, recvAt) {
 }
 
 /**
+ * Whether a value nests deeper than MAX_DATA_DEPTH (objects and arrays; the value itself is level 1). Iterative, so it
+ * never overflows the stack itself.
+ * @param {unknown} value
+ */
+export function nestsTooDeep(value) {
+  /** @type {[unknown, number][]} */
+  const stack = [[value, 1]];
+  while (stack.length > 0) {
+    const [v, depth] = /** @type {[unknown, number]} */ (stack.pop());
+    if (v === null || typeof v !== "object") continue;
+    if (depth > MAX_DATA_DEPTH) return true;
+    for (const child of Object.values(v)) stack.push([child, depth + 1]);
+  }
+  return false;
+}
+
+/**
  * What the push rules read from the store.
  * @typedef {object} Reader
  * @property {(id: string) => boolean} hasEvent
@@ -139,6 +165,7 @@ export function clockSkewOf(ev, recvAt) {
  * @property {(ticketId: string) => OrderState[]} creditNotesOf
  * @property {(receiptNo: string) => string | null} receiptOwner
  * @property {(paymentId: string) => string | null} paymentOrder
+ * @property {(id: string) => { code: string, message: string } | null} deadLetter the refusal of an earlier push
  * @property {(id: string) => { kind: string | null, prefix: string | null, at: number, writer: string, eventId: string } | null} device
  * @property {(id: string) => number | null} revokedAt
  * @property {(id: string) => boolean} staffKnown
@@ -298,7 +325,13 @@ function item(raw) {
  * @returns {Decision}
  */
 export function decideBatch(events, caller, o) {
-  const items = events.map(item);
+  // docs/04 §5: a refused event is never decided again. Pushed again (a retry after a lost answer, or a forged copy),
+  // its id gets its first refusal back: it can never enter the log later, and its dead letter is never rewritten.
+  const items = events.map((raw) => {
+    const it = item(raw);
+    const refused = it.id === null ? null : o.reader.deadLetter(it.id);
+    return refused ? { ...it, error: new EventError(refused.code, refused.message) } : it;
+  });
   /** @type {Map<string, string>} */
   const forced = new Map();
   for (;;) {
@@ -332,7 +365,12 @@ function decideOnce(items, caller, { reader, recvAt, tenantId = null }, forced) 
     if (it.id !== null && (listed.has(it.id) || reader.hasEvent(it.id))) continue;
     if (it.id !== null) listed.add(it.id);
     const v = it.value;
-    if (!v || (v.type !== "lines.moved_out" && v.type !== "lines.moved_in") || typeof v.data?.moveId !== "string")
+    if (
+      !v ||
+      it.error ||
+      (v.type !== "lines.moved_out" && v.type !== "lines.moved_in") ||
+      typeof v.data?.moveId !== "string"
+    )
       continue;
     const g = moves.get(v.data.moveId) ?? { outs: [], ins: [] };
     (v.type === "lines.moved_out" ? g.outs : g.ins).push(v);
@@ -352,6 +390,8 @@ function decideOnce(items, caller, { reader, recvAt, tenantId = null }, forced) 
     try {
       if (it.error) throw it.error;
       const ev = rule(() => validateEnvelope(it.value));
+      if (nestsTooDeep(ev.data))
+        throw new EventError("E_BAD_DATA", `event data nests more than ${MAX_DATA_DEPTH} levels deep`);
       const info = typeInfo(ev.type);
       if (info.kind === "sequenced" && blocked.has(ev.entity)) {
         throw new EventError("E_SEQ_BLOCKED", `an earlier event of ${ev.entity} was refused in this batch`);
@@ -386,7 +426,8 @@ function decideOnce(items, caller, { reader, recvAt, tenantId = null }, forced) 
         id: it.id,
         code: e.code,
         message: e.message,
-        device: typeof v?.device === "string" ? v.device : caller.device,
+        // the authenticated writer: the caller, or the device a Station relays (never an unchecked claim)
+        device: caller.relaying && typeof v?.device === "string" ? v.device : caller.device,
         event: v,
       });
       if (it.id !== null) refusedIds.add(it.id);
@@ -467,14 +508,21 @@ function checkStaff(ev, w) {
  * @returns {OrderState | BankState}
  */
 function sequenced(ev, w, batch) {
+  // docs/04 §5, §9: an old owner's late event is E_NOT_OWNER. The kit's reducers check seq first, and a take-over uses
+  // the very seq the offline owner used next, so the owner is checked here, before them; E_SEQ stays a gap after a crash.
   if (BANK_EVENT_TYPES.includes(ev.type)) {
-    const next = /** @type {BankState} */ (rule(() => reduce(ev, w.bank(ev.entity))));
+    const bank = w.bank(ev.entity);
+    if (bank && ev.type !== "bank.taken_over" && ev.device !== bank.owner)
+      throw new BankRuleError("E_NOT_OWNER", `${ev.device} no longer holds ${bank.id} (owner ${bank.owner})`);
+    const next = /** @type {BankState} */ (rule(() => reduce(ev, bank)));
     w.setBank(next);
     return next;
   }
   if (!ORDER_EVENT_TYPES.includes(ev.type))
     throw new EventError("E_BAD_EVENT", `${ev.type}: tip pools are handled from V1.1 (prompt 21)`);
   const prev = w.order(ev.entity);
+  if (prev && ev.type !== "order.taken_over" && ev.device !== prev.owner)
+    throw new OrderRuleError("E_NOT_OWNER", `${ev.device} does not own ${prev.id} (owner ${prev.owner})`);
   const next = /** @type {OrderState} */ (rule(() => reduce(ev, prev)));
   const d = ev.data;
   switch (ev.type) {
@@ -502,6 +550,9 @@ function sequenced(ev, w, batch) {
       const m = RECEIPT_NO.exec(no);
       if (!m || m[1] !== series)
         throw new OrderRuleError("E_BAD_DATA", `receipt ${no} is not in the series ${series} of ${ev.device}`);
+      // one spelling per number (receipts.js writes it, numbers start at 1), so E_DUP_RECEIPT compares numbers
+      if (Number(m[2]) < 1 || no !== formatReceiptNo(series, Number(m[2])))
+        throw new OrderRuleError("E_BAD_DATA", `receipt ${no} is not written like ${formatReceiptNo(series, 1)}`);
       break;
     }
     case "order.transferred": {
@@ -570,6 +621,8 @@ const SCREEN_MARKS = Object.freeze([
 const SCREEN_ORDER_TYPES = Object.freeze([
   "order.opened",
   "line.added",
+  // a quantity changes only before sending (docs/03 §5) and lines.sent carries ids only: the screen needs it
+  "line.qty_changed",
   "line.voided",
   "lines.sent",
   "lines.fired",
@@ -593,8 +646,12 @@ export const SCREEN_RECENT_MS = 6 * 60 * 60_000;
 
 /**
  * docs/04 §3: tills and phones get the catalog, settings, staff, layout, kitchen status, the open orders and banks and
- * how orders and banks end; screens get the sent lines and the kitchen status; the back office (and the Station, which
- * keeps every event of the last 7 days, and the cloud) gets everything.
+ * how orders and banks end; screens get the kitchen status and the line events (`SCREEN_ORDER_TYPES`) of every order
+ * open or ended less than SCREEN_RECENT_MS ago, all stations and unsent lines included: a line's content comes before
+ * its `lines.sent` in the log, and the store knows the kind of the device pulling, not its station. Keeping only the
+ * sent lines of the screen's own station is left to the pull endpoint (prompt 06) or the screen (prompt 30), as
+ * docs/04 §3 records. The back office (and the Station, which keeps every event of the last 7 days, and the cloud)
+ * gets everything.
  * @param {DeviceKind} kind
  * @returns {PullScope}
  */

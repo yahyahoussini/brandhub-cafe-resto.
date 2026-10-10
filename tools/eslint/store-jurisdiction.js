@@ -6,8 +6,10 @@
  * `env.STORE.getByName(…)`, `env["STORE"]`, `const { STORE } = env`, `({ STORE }) => …`.
  * The Workers' loopback bindings reach the same Durable Object class without the jurisdiction, so they are reported
  * too: `import { exports } from "cloudflare:workers"`, `exports.CafeStore`, `ctx.exports.RestoStore`,
- * `this.ctx.exports…`, `const { exports } = ctx`, `const { CafeStore } = ctx.exports`. Only `….exports.default` (the
- * Worker's own entry point, not a store) is allowed.
+ * `this.ctx.exports…`, `const { exports } = ctx`, `const { CafeStore } = ctx.exports`, and a re-export that would carry
+ * them to another module under any name: `export { exports as loopback } from "cloudflare:workers"`,
+ * `export * from "cloudflare:workers"`. Only `….exports.default` (the Worker's own entry point, not a store) is
+ * allowed.
  * eslint.config.js applies it to the Workers' source and exempts the helper itself.
  */
 
@@ -41,6 +43,18 @@ export const storeThroughJurisdiction = {
           if (spec.type === "ImportSpecifier" && keyName(spec.imported, false) === "exports")
             context.report({ node: spec, messageId: "loopback" });
         }
+      },
+      // a re-export would hand the loopback map to another module under a name the rule cannot follow
+      /** @param {any} node */
+      ExportNamedDeclaration(node) {
+        if (node.source?.value !== "cloudflare:workers") return;
+        for (const spec of node.specifiers) {
+          if (keyName(spec.local, false) === "exports") context.report({ node: spec, messageId: "loopback" });
+        }
+      },
+      /** @param {any} node */
+      ExportAllDeclaration(node) {
+        if (node.source.value === "cloudflare:workers") context.report({ node, messageId: "loopback" });
       },
       /** @param {any} node */
       MemberExpression(node) {

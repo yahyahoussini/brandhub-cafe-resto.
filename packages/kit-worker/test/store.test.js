@@ -196,8 +196,8 @@ test("the writer must be a device or a member of this client, signing as the cal
     "E_WRONG_DEVICE",
   ]);
   // a Station relays a phone's event only when it says it relays
+  assert.deepEqual(codes(await store.append([mark(v.ids.phone, v.ids.ali)], v.callers.station)), ["E_WRONG_DEVICE"]);
   const relayed = mark(v.ids.phone, v.ids.ali);
-  assert.deepEqual(codes(await store.append([relayed], v.callers.station)), ["E_WRONG_DEVICE"]);
   const ok = await store.append([relayed], v.callers.relay);
   assert.deepEqual(ok.accepted, [relayed.id]);
   assert.deepEqual(all("SELECT relayed_by FROM events WHERE id = ?", relayed.id), [{ relayed_by: v.ids.station }]);
@@ -227,6 +227,12 @@ test("the writer must be a device or a member of this client, signing as the cal
   // tip pools wait for V1.1
   const tip = v.ev({ device: v.ids.till, staff: v.ids.sara, type: "tip.pool_opened", entity: newId("tip"), data: {} });
   assert.deepEqual(codes(await store.append([tip], v.callers.till)), ["E_BAD_EVENT"]);
+  // a relaying caller must be a Station of the directory: not a till, not an unknown device
+  for (const device of [v.ids.till, newId("dev")])
+    assert.deepEqual(
+      codes(await store.append([mark(v.ids.phone, v.ids.ali)], { device, kind: "station", relaying: true })),
+      ["E_UNKNOWN_DEVICE"],
+    );
   // a malformed caller is the Worker's bug: it throws
   await assert.rejects(() => store.append([], /** @type {any} */ ({ device: v.ids.till, kind: "office" })), TypeError);
   await assert.rejects(
@@ -291,6 +297,210 @@ test("a refused sequenced event blocks its aggregate for the rest of the batch; 
   assert.deepEqual(codes(await store.append([gap], v.callers.till)), ["E_SEQ"]);
   assert.equal(all("SELECT COUNT(*) AS n FROM deadletter WHERE id = ?", gap.id)[0].n, 1);
   void tillBank;
+});
+
+test("a refused id keeps its first refusal: pushed again, by anyone, it gets that answer and its dead letter stays", async () => {
+  const { v, store, all, tillBank } = await ready();
+  /** @param {string} id */
+  const letter = (id) =>
+    all("SELECT device, received_at, code, message, event, resolved_at, resolved_by FROM deadletter WHERE id = ?", id);
+  // cash refused for a bank not open yet; the answer is lost, the bank opens, the push is retried (docs/04 §10.4)
+  const aliBank = newId("bnk");
+  const repay = v.ev({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    type: "kredi.repaid",
+    entity: newId("cus"),
+    data: { amountCentimes: 1500, tender: "cash", bankId: aliBank },
+  });
+  assert.deepEqual(codes(await store.append([repay], v.callers.phone)), ["E_BANK_UNKNOWN"]);
+  const first = letter(repay.id);
+  const opened = v.ev({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    type: "bank.opened",
+    entity: aliBank,
+    data: { kind: "waiter", holder: v.ids.ali, floatCentimes: 0 },
+  });
+  assert.deepEqual((await store.append([opened], v.callers.phone)).rejected, []);
+  const retry = await store.append([repay], v.callers.phone);
+  assert.deepEqual([retry.accepted, codes(retry)], [[], ["E_BANK_UNKNOWN"]]);
+  assert.deepEqual(all("SELECT COUNT(*) AS n FROM events WHERE id = ?", repay.id), [{ n: 0 }]);
+  assert.deepEqual(all("SELECT expected FROM banks WHERE id = ?", aliBank), [{ expected: 0 }]);
+  assert.deepEqual(letter(repay.id), first, "the log and the dead letters never both hold the event");
+  // resolved by the manager, who re-enters the money (docs/04 §5), it stays refused: never counted twice
+  const resolved = v.office("deadletter.resolved", repay.id, { how: "reentered", note: "reprise ticket refusé" });
+  assert.deepEqual((await store.append([resolved], v.callers.office)).rejected, []);
+  assert.deepEqual(
+    letter(repay.id).map((l) => [l.resolved_at, l.resolved_by]),
+    [[resolved.at, v.ids.owner]],
+  );
+  assert.deepEqual(codes(await store.append([repay], v.callers.phone)), ["E_BANK_UNKNOWN"]);
+  assert.deepEqual(all("SELECT expected FROM banks WHERE id = ?", aliBank), [{ expected: 0 }]);
+
+  // the phone's cash refused for the till's drawer: a copy with a smaller amount, or a forged copy pushed by the till,
+  // changes neither the answer nor what the manager reviews (docs/04 §9, "encaissement après reprise")
+  const sale = v.sale({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    bank: tillBank,
+    lines: [["noir", 15]],
+    pay: { tender: "cash", amount: 15000 },
+  });
+  const payment = sale.events[sale.events.length - 1];
+  assert.deepEqual(codes(await store.append(sale.events, v.callers.phone)), ["E_NOT_OWNER"]);
+  const kept = letter(payment.id);
+  assert.deepEqual(
+    kept.map((l) => [l.device, l.code, JSON.parse(/** @type {string} */ (l.event)).data.amountCentimes]),
+    [[v.ids.phone, "E_NOT_OWNER", 15000]],
+  );
+  const smaller = { ...payment, data: { ...payment.data, amountCentimes: 100 } };
+  assert.deepEqual(codes(await store.append([smaller], v.callers.phone)), ["E_NOT_OWNER"]);
+  const forged = { id: payment.id, type: "nope", device: v.ids.phone };
+  assert.deepEqual(codes(await store.append([forged], v.callers.till)), ["E_NOT_OWNER"]);
+  assert.deepEqual(letter(payment.id), kept);
+  // a dead letter names the device that pushed the event, not the device the event claims
+  const claimed = v.ev({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    type: "table.mark",
+    entity: newId("tbl"),
+    data: { state: "free" },
+  });
+  assert.deepEqual(codes(await store.append([claimed], v.callers.till)), ["E_WRONG_DEVICE"]);
+  assert.deepEqual(
+    letter(claimed.id).map((l) => l.device),
+    [v.ids.till],
+  );
+});
+
+test("after a take-over, the old owner's late events are refused E_NOT_OWNER, not E_SEQ (docs/04 §9)", async () => {
+  const { v, store, all } = await ready();
+  const aliBank = newId("bnk");
+  const table = v.sale({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    mode: "table",
+    tableId: newId("tbl"),
+    lines: [["noir", 1]],
+    send: true,
+  });
+  const opened = v.ev({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    type: "bank.opened",
+    entity: aliBank,
+    data: { kind: "waiter", holder: v.ids.ali, floatCentimes: 0 },
+  });
+  assert.deepEqual((await store.append([opened, ...table.events], v.callers.phone)).rejected, []);
+  // offline, the phone writes on with the next seqs it knows
+  const lateCash = v.ev({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    type: "bank.cash_in",
+    entity: aliBank,
+    seq: 2,
+    data: { amountCentimes: 3000, reason: "monnaie" },
+  });
+  const lateLine = v.ev({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    type: "line.added",
+    entity: table.id,
+    seq: 4,
+    data: { lineId: newId("lin"), ...PRODUCTS.the, category: v.ids.drinks, qtyMilli: 1000 },
+  });
+  // meanwhile the manager settles the bank and takes the table over on the till
+  const takeovers = [
+    v.ev({
+      device: v.ids.till,
+      staff: v.ids.karim,
+      type: "bank.taken_over",
+      entity: aliBank,
+      seq: 2,
+      data: { approvedBy: v.ids.karim },
+    }),
+    v.ev({
+      device: v.ids.till,
+      staff: v.ids.karim,
+      type: "bank.counted",
+      entity: aliBank,
+      seq: 3,
+      data: { countedCentimes: 0 },
+    }),
+    v.ev({
+      device: v.ids.till,
+      staff: v.ids.karim,
+      type: "order.taken_over",
+      entity: table.id,
+      seq: 4,
+      data: { approvedBy: v.ids.karim },
+    }),
+  ];
+  assert.deepEqual((await store.append(takeovers, v.callers.till)).rejected, []);
+  const late = await store.append([lateCash, lateLine], v.callers.phone);
+  const refused = [
+    [lateCash.id, "E_NOT_OWNER"],
+    [lateLine.id, "E_NOT_OWNER"],
+  ];
+  assert.deepEqual(
+    late.rejected.map((x) => [x.id, x.code]),
+    refused,
+  );
+  assert.deepEqual(
+    all("SELECT id, code FROM deadletter")
+      .map((d) => [d.id, d.code])
+      .sort(),
+    [...refused].sort(),
+  );
+  assert.deepEqual(all("SELECT status, expected FROM banks WHERE id = ?", aliBank), [
+    { status: "counted", expected: 0 },
+  ]);
+  // the new owner's own gap is still E_SEQ
+  const gap = v.ev({
+    device: v.ids.till,
+    staff: v.ids.karim,
+    type: "order.note_set",
+    entity: table.id,
+    seq: 9,
+    data: { note: "terrasse" },
+  });
+  assert.deepEqual(codes(await store.append([gap], v.callers.till)), ["E_SEQ"]);
+});
+
+test("event data nested too deep is refused alone (E_BAD_DATA), the rest of the batch is stored", async () => {
+  const { v, store, all } = await ready();
+  /** @param {number} levels @returns {unknown} */
+  const nested = (levels) => {
+    /** @type {unknown} */
+    let x = "x";
+    for (let i = 0; i < levels; i += 1) x = [x];
+    return x;
+  };
+  const mark = (/** @type {unknown} */ note) =>
+    v.ev({
+      device: v.ids.till,
+      staff: v.ids.sara,
+      type: "table.mark",
+      entity: newId("tbl"),
+      data: { state: "free", note },
+    });
+  const fine = mark(null);
+  // 3,000 levels in about 6 KB: under the 16 KB limit, but the chain's canonical JSON would overflow the stack
+  const deep = mark(nested(3000));
+  const r = await store.append([fine, deep], v.callers.till);
+  assert.deepEqual(r.accepted, [fine.id]);
+  assert.deepEqual(
+    r.rejected.map((x) => [x.id, x.code]),
+    [[deep.id, "E_BAD_DATA"]],
+  );
+  assert.deepEqual(all("SELECT code FROM deadletter WHERE id = ?", deep.id), [{ code: "E_BAD_DATA" }]);
+  // the limit itself, 32 levels (docs/04 §2): the data object is level 1, so 31 nested arrays are kept and 32 are not
+  const atLimit = mark(nested(31));
+  const over = mark(nested(32));
+  assert.deepEqual(codes(await store.append([atLimit, over], v.callers.till)), ["E_BAD_DATA"]);
+  assert.deepEqual(all("SELECT COUNT(*) AS n FROM events WHERE id = ?", atLimit.id), [{ n: 1 }]);
+  assert.deepEqual(await store.verify(), { ok: true });
 });
 
 test("money lands only in an open bank held by the writing device (assertBankAccepts)", async () => {
@@ -363,6 +573,104 @@ test("money lands only in an open bank held by the writing device (assertBankAcc
     pay: { tender: "cash", amount: 1000 },
   });
   assert.deepEqual(codes(await store.append(late.events, v.callers.phone)), ["E_BANK_CLOSED"]);
+});
+
+test("a payment id belongs to one order (E_DUP_PAYMENT), across batches and inside one", async () => {
+  const { v, store, tillBank } = await ready();
+  /** @param {string} paymentId @param {string} receiptNo */
+  const paid = (paymentId, receiptNo) => {
+    const o = v.sale({ device: v.ids.till, staff: v.ids.sara, lines: [["noir", 1]] });
+    return [
+      ...o.events,
+      o.next("payment.added", {
+        paymentId,
+        tender: "cash",
+        amountCentimes: 1000,
+        tenderedCentimes: null,
+        reference: null,
+        bankId: tillBank,
+      }),
+      o.next("order.closed", { receiptNo }),
+    ];
+  };
+  const pay = newId("pay");
+  assert.deepEqual((await store.append(paid(pay, "C1-000001"), v.callers.till)).rejected, []);
+  assert.deepEqual(codes(await store.append(paid(pay, "C1-000002"), v.callers.till)), [
+    "E_DUP_PAYMENT",
+    "E_SEQ_BLOCKED",
+  ]);
+  const shared = newId("pay");
+  const both = await store.append([...paid(shared, "C1-000002"), ...paid(shared, "C1-000003")], v.callers.till);
+  assert.deepEqual(codes(both), ["E_DUP_PAYMENT", "E_SEQ_BLOCKED"]);
+  assert.equal(both.accepted.length, 4 + 2, "the first order whole, the second's opening and line");
+});
+
+test("a payment is voided only while its bank is open and held by the writer (assertBankAccepts)", async () => {
+  const { v, store, all } = await ready();
+  const aliBank = newId("bnk");
+  const opened = v.ev({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    type: "bank.opened",
+    entity: aliBank,
+    data: { kind: "waiter", holder: v.ids.ali, floatCentimes: 0 },
+  });
+  // a table pays part of its bill in cash into Ali's bank, then Ali counts and closes the bank
+  const table = v.sale({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    bank: aliBank,
+    mode: "table",
+    tableId: newId("tbl"),
+    lines: [["noir", 2]],
+    send: true,
+    pay: { tender: "cash", amount: 1000 },
+  });
+  const paymentId = table.events[table.events.length - 1].data.paymentId;
+  const closing = ["bank.counted", "bank.closed"].map((type) =>
+    v.ev({
+      device: v.ids.phone,
+      staff: v.ids.ali,
+      type,
+      entity: aliBank,
+      data: type === "bank.counted" ? { countedCentimes: 1000 } : {},
+    }),
+  );
+  assert.deepEqual((await store.append([opened, ...table.events, ...closing], v.callers.phone)).rejected, []);
+  const voided = table.next("payment.voided", { paymentId, reason: "erreur", approvedBy: v.ids.karim });
+  assert.deepEqual(codes(await store.append([voided], v.callers.phone)), ["E_BANK_CLOSED"]);
+  assert.deepEqual(all("SELECT voided FROM payments WHERE payment_id = ?", paymentId), [{ voided: 0 }]);
+  assert.deepEqual(all("SELECT expected, variance FROM banks WHERE id = ?", aliBank), [
+    { expected: 1000, variance: 0 },
+  ]);
+});
+
+test("an order is transferred only to a till or a phone of the client (E_UNKNOWN_DEVICE)", async () => {
+  const { v, store, all } = await ready();
+  const table = v.sale({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    mode: "table",
+    tableId: newId("tbl"),
+    lines: [["noir", 1]],
+    send: true,
+  });
+  assert.deepEqual((await store.append(table.events, v.callers.phone)).rejected, []);
+  const seq = /** @type {number} */ (table.events[table.events.length - 1].seq) + 1;
+  /** @param {string} toDevice */
+  const transfer = (toDevice) =>
+    v.ev({
+      device: v.ids.phone,
+      staff: v.ids.ali,
+      type: "order.transferred",
+      entity: table.id,
+      seq,
+      data: { toDevice },
+    });
+  for (const to of [v.ids.screen, v.ids.station, newId("dev")])
+    assert.deepEqual(codes(await store.append([transfer(to)], v.callers.phone)), ["E_UNKNOWN_DEVICE"], to);
+  assert.deepEqual((await store.append([transfer(v.ids.till)], v.callers.phone)).rejected, []);
+  assert.deepEqual(all("SELECT owner FROM orders WHERE id = ?", table.id), [{ owner: v.ids.till }]);
 });
 
 /**
@@ -440,7 +748,10 @@ test("a move is kept whole: both events in one batch, the same lines, or both re
   const r1 = await store.append([...repriced, covers], v.callers.phone);
   assert.deepEqual(codes(r1), ["E_MOVE_PAIR", "E_MOVE_PAIR", "E_SEQ_BLOCKED"]);
   // a lines.moved_in that changes a line's category (its tax class, docs/11 §6) or its kitchen: both refused
-  const relabeled = [out(), inn(snaps.map((l, i) => (i === 0 ? { ...l, category: v.ids.food, station: "cuisine" } : l)))];
+  const relabeled = [
+    out(),
+    inn(snaps.map((l, i) => (i === 0 ? { ...l, category: v.ids.food, station: "cuisine" } : l))),
+  ];
   assert.deepEqual(codes(await store.append(relabeled, v.callers.phone)), ["E_MOVE_PAIR", "E_MOVE_PAIR"]);
   // the valid move
   const pair = [out(), inn()];
@@ -598,7 +909,7 @@ test("a credit note never refunds more than what is left of its ticket", async (
     receiptNo: "C1-000001",
   });
   await store.append(ticket.events, v.callers.till);
-  const refund = (/** @type {number} */ qty, /** @type {string} */ no) =>
+  const refund = (/** @type {number} */ qty, /** @type {string} */ no, of = { id: ticket.id, no: "C1-000001" }) =>
     v.sale({
       device: v.ids.till,
       staff: v.ids.sara,
@@ -606,7 +917,7 @@ test("a credit note never refunds more than what is left of its ticket", async (
       lines: [["noir", -qty]],
       pay: { tender: "cash", amount: -1000 * qty },
       receiptNo: no,
-      refundOf: { orderId: ticket.id, receiptNo: "C1-000001" },
+      refundOf: { orderId: of.id, receiptNo: of.no },
     });
   const first = refund(2, "C1-000002");
   assert.deepEqual((await store.append(first.events, v.callers.till)).rejected, []);
@@ -624,6 +935,28 @@ test("a credit note never refunds more than what is left of its ticket", async (
     refundOf: { orderId: newId("ord"), receiptNo: "C1-000009" },
   });
   assert.deepEqual(codes(await store.append(ghost.events, v.callers.till)), ["E_REFUND_EXCEEDS", "E_SEQ_BLOCKED"]);
+  // two credit notes of one ticket pushed in the same batch count together
+  const other = v.sale({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    bank: tillBank,
+    lines: [["noir", 3]],
+    pay: { tender: "cash", amount: 3000 },
+    receiptNo: "C1-000005",
+  });
+  assert.deepEqual((await store.append(other.events, v.callers.till)).rejected, []);
+  const of = { id: other.id, no: "C1-000005" };
+  const [a, b] = [refund(2, "C1-000006", of), refund(2, "C1-000007", of)];
+  const both = await store.append([...a.events, ...b.events], v.callers.till);
+  assert.deepEqual(
+    both.rejected.map((x) => [x.id, x.code]),
+    [
+      [b.events[1].id, "E_REFUND_EXCEEDS"],
+      [b.events[2].id, "E_SEQ_BLOCKED"],
+      [b.events[3].id, "E_SEQ_BLOCKED"],
+    ],
+  );
+  assert.deepEqual(both.accepted, [...a.events.map((e) => e.id), b.events[0].id]);
 });
 
 test("a receipt number is used once, in the closing device's own series", async () => {
@@ -646,6 +979,18 @@ test("a receipt number is used once, in the closing device's own series", async 
   });
   const r = await store.append([...one.events, ...two.events], v.callers.till);
   assert.deepEqual(codes(r), ["E_DUP_RECEIPT"]);
+  // one number, one spelling (receipts.js formatReceiptNo), from 1: "C1-1" is not a second receipt number 1
+  for (const [i, no] of ["C1-1", "C1-0000001", "C1-01", "C1-000000", "C1-0"].entries()) {
+    const odd = v.sale({
+      device: v.ids.till,
+      staff: v.ids.sara,
+      bank: tillBank,
+      lines: [["noir", 1]],
+      pay: { tender: "card_external", amount: 1000, reference: `90${i}` },
+      receiptNo: no,
+    });
+    assert.deepEqual(codes(await store.append(odd.events, v.callers.till)), ["E_BAD_DATA"], no);
+  }
   const other = v.sale({
     device: v.ids.till,
     staff: v.ids.sara,
@@ -1305,8 +1650,11 @@ test("rebuild() gives identical projections, and the day's numbers equal the kit
   assert.equal(rebuilt.events, log.length);
   assert.deepEqual(snapshot(all), before);
   assert.deepEqual(all("SELECT * FROM events ORDER BY pos"), log);
-  // a damaged projection is repaired by a rebuild
+  // a damaged projection is repaired by a rebuild, and a row no event wrote is gone
   s.storage.db.exec("DELETE FROM orders; UPDATE banks SET expected = 0");
+  s.storage.db
+    .prepare("INSERT INTO zones (id, data, at, writer, event_id) VALUES (?, '{}', 0, ?, ?)")
+    .run(newId("zon"), ids.till, "not-an-event");
   await store.rebuild();
   assert.deepEqual(snapshot(all), before);
   assert.deepEqual(store.dailyReport(v.businessDay), JSON.parse(JSON.stringify(kit)));
@@ -1314,6 +1662,17 @@ test("rebuild() gives identical projections, and the day's numbers equal the kit
 
 test("pull sends each device kind its part of the log (docs/04 §3)", async () => {
   const { v, store, tillBank } = await ready();
+  // a counter order sold three days ago: a screen gets only how it ended
+  const old = v.sale({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    bank: tillBank,
+    when: v.at(9, 0),
+    lines: [["creme", 1]],
+    send: true,
+    pay: { tender: "cash", amount: 1200 },
+    receiptNo: "C1-000001",
+  });
   // a counter order paid and sent a few minutes ago (the screen rule looks at the server's clock)
   const closed = v.sale({
     device: v.ids.till,
@@ -1323,18 +1682,45 @@ test("pull sends each device kind its part of the log (docs/04 §3)", async () =
     lines: [["noir", 1]],
     send: true,
     pay: { tender: "cash", amount: 1000 },
-    receiptNo: "C1-000001",
+    receiptNo: "C1-000002",
   });
+  // an open table order whose quantity changed before sending: the bar must see the quantity sent
   const open = v.sale({
     device: v.ids.phone,
     staff: v.ids.ali,
     mode: "table",
     tableId: newId("tbl"),
-    lines: [["the", 2]],
-    send: true,
+    lines: [["the", 1]],
   });
-  await store.append(closed.events, v.callers.till);
-  await store.append(open.events, v.callers.phone);
+  const openEvents = [
+    ...open.events,
+    open.next("line.qty_changed", { lineId: open.lineIds[0], qtyMilli: 3000 }),
+    open.next("lines.sent", { lineIds: open.lineIds }),
+  ];
+  // the phone's bank, counted and closed: tills keep only its closing
+  const aliBank = newId("bnk");
+  const bank = [
+    ["bank.opened", { kind: "waiter", holder: v.ids.ali, floatCentimes: 0 }],
+    ["bank.counted", { countedCentimes: 0 }],
+    ["bank.closed", {}],
+  ].map(([type, data]) =>
+    v.ev({ device: v.ids.phone, staff: v.ids.ali, type: String(type), entity: aliBank, data: Object(data) }),
+  );
+  // the log ends with an event that no till, phone or screen receives (a movement)
+  const reading = v.ev({
+    device: v.ids.till,
+    staff: v.ids.karim,
+    type: "machine.reading",
+    entity: newId("mch"),
+    data: { reading: 100, kind: "open", businessDate: v.businessDay },
+  });
+  for (const [events, caller] of /** @type {const} */ ([
+    [old.events, v.callers.till],
+    [closed.events, v.callers.till],
+    [[...openEvents, ...bank], v.callers.phone],
+    [[reading], v.callers.till],
+  ]))
+    assert.deepEqual((await store.append([...events], caller)).rejected, []);
   const all = store.pull(0, "office");
   assert.equal(all.events.length, all.last);
   assert.equal(all.more, false);
@@ -1360,20 +1746,31 @@ test("pull sends each device kind its part of the log (docs/04 §3)", async () =
   assert.deepEqual(types(till, closed.id), ["order.closed"], "a closed order: only how it ended");
   assert.deepEqual(
     types(till, open.id),
-    open.events.map((e) => e.type),
+    openEvents.map((e) => e.type),
     "an open order: everything",
   );
   assert.ok(till.events.some((e) => e.type === "staff.set") && till.events.some((e) => e.type === "device.set"));
   assert.deepEqual(types(till, tillBank), ["bank.opened"], "an open bank");
+  assert.deepEqual(types(till, aliBank), ["bank.closed"], "a closed bank: only how it ended");
+  assert.ok(!till.events.some((e) => e.id === reading.id));
+  assert.ok(till.events[till.events.length - 1].pos < all.last);
   assert.equal(till.last, all.last, "the filtered tail is skipped");
 
   const screen = store.pull(0, "screen");
-  assert.ok(
-    types(screen, closed.id).includes("lines.sent"),
-    "a counter order paid before it is made still reaches the bar",
+  assert.deepEqual(
+    types(screen, closed.id),
+    ["order.opened", "line.added", "lines.sent", "order.closed"],
+    "a counter order paid before it is made still reaches the bar, and so does its closing",
   );
-  assert.ok(!types(screen, closed.id).includes("payment.added"));
-  assert.ok(!screen.events.some((e) => e.type === "staff.set" || e.type === "bank.opened"));
+  assert.deepEqual(types(screen, old.id), ["order.closed"], "an order closed more than 6 hours ago: only its end");
+  assert.deepEqual(
+    types(screen, open.id),
+    ["order.opened", "line.added", "line.qty_changed", "lines.sent"],
+    "the quantity sent, not the one first added",
+  );
+  assert.equal(screen.events.find((e) => e.type === "line.qty_changed")?.data.qtyMilli, 3000);
+  assert.ok(!screen.events.some((e) => e.type === "staff.set" || e.type.startsWith("bank.")));
+  assert.equal(screen.last, all.last);
 
   // pages: `more` and `last`
   const page = store.pull(0, "office", 5);
@@ -1473,6 +1870,167 @@ test("a day's numbers are recomputed when an event changes them, a bank of the d
   assert.notEqual(nextDay, day);
   assert.equal(store.dailyReport(/** @type {string} */ (nextDay)).revenueCentimes, 1200);
   assert.throws(() => store.dailyReport("2026-02-30"), RangeError);
+});
+
+test("a new business-day cut-off applies at once: to the days already computed and to new orders", async () => {
+  const { v, store, all, tillBank } = await ready();
+  const day = v.businessDay;
+  // 04:00 the next morning belongs to the day under the 05:00 cut-off
+  const night = v.sale({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    bank: tillBank,
+    when: v.at(28, 0),
+    lines: [["noir", 1]],
+    pay: { tender: "cash", amount: 1000 },
+    receiptNo: "C1-000001",
+  });
+  assert.deepEqual((await store.append(night.events, v.callers.till)).rejected, []);
+  assert.equal(store.dailyReport(day).tickets.count, 1);
+  const cutoff = v.office("settings.set", v.ids.tenant, { path: "hours.businessDayCutoff", value: "03:00" });
+  assert.deepEqual((await store.append([cutoff], v.callers.office)).rejected, []);
+  assert.equal(store.dailyReport(day).tickets.count, 0, "the day computed before is computed again");
+  assert.deepEqual(
+    store.dailyReport(day),
+    buildDay(store.pull(0, "office").events, { businessDate: day, cutoff: "03:00" }),
+  );
+  // an order closed at 04:00 two mornings later takes the new cut-off's day at once
+  const later = v.sale({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    bank: tillBank,
+    when: v.at(52, 0),
+    lines: [["noir", 1]],
+    pay: { tender: "cash", amount: 1000 },
+    receiptNo: "C1-000002",
+  });
+  assert.deepEqual((await store.append(later.events, v.callers.till)).rejected, []);
+  const [row] = all("SELECT business_at, business_date FROM orders WHERE id = ?", later.id);
+  assert.equal(row.business_date, businessDate(/** @type {number} */ (row.business_at), { cutoff: "03:00" }));
+  assert.notEqual(row.business_date, businessDate(/** @type {number} */ (row.business_at), { cutoff: "05:00" }));
+});
+
+test("after a cut-off change, money into a bank makes the day the bank now belongs to dirty", async () => {
+  const v = venue();
+  const { store, all } = open(v);
+  assert.deepEqual((await store.append(v.setup(), v.callers.office)).rejected, []);
+  const day = v.businessDay;
+  // the till opens its bank at 03:00: the day before, under the 05:00 cut-off
+  const bank = newId("bnk");
+  const opened = v.ev({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    type: "bank.opened",
+    entity: bank,
+    data: { kind: "till", holder: v.ids.sara, floatCentimes: 50000 },
+    at: v.at(3, 0),
+  });
+  assert.deepEqual((await store.append([opened], v.callers.till)).rejected, []);
+  // the office moves the cut-off to 02:00: the bank now belongs to the day
+  const cutoff = v.office("settings.set", v.ids.tenant, { path: "hours.businessDayCutoff", value: "02:00" });
+  assert.deepEqual((await store.append([cutoff], v.callers.office)).rejected, []);
+  assert.deepEqual(
+    store
+      .dailyReport(day)
+      .banks.map((/** @type {{ id: string, expectedCentimes: number }} */ b) => [b.id, b.expectedCentimes]),
+    [[bank, 50000]],
+  );
+  // a customer repays 50,00 of Kredi in cash into that drawer
+  const repaid = v.ev({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    type: "kredi.repaid",
+    entity: newId("cus"),
+    data: { amountCentimes: 5000, tender: "cash", bankId: bank },
+  });
+  assert.deepEqual((await store.append([repaid], v.callers.till)).rejected, []);
+  const kit = buildDay(store.pull(0, "office").events, { businessDate: day, cutoff: "02:00" });
+  assert.equal(kit.banks[0].expectedCentimes, 55000);
+  store.refresh();
+  assert.deepEqual(store.dailyReport(day), kit);
+  const kept = all("SELECT business_date, report FROM daily ORDER BY business_date");
+  await store.rebuild();
+  assert.deepEqual(all("SELECT business_date, report FROM daily ORDER BY business_date"), kept, "a rebuild agrees");
+});
+
+test("after a cut-off change, an order that ends on a later day makes the day it leaves dirty", async () => {
+  const { v, store } = await ready();
+  const day = v.businessDay;
+  // a table opened at 04:00 (the day before, under the 05:00 cut-off), a sent coffee voided with approval
+  const table = v.sale({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    when: v.at(4, 0),
+    mode: "table",
+    tableId: newId("tbl"),
+    lines: [
+      ["noir", 1],
+      ["creme", 1],
+    ],
+    send: true,
+  });
+  const voided = table.next("line.voided", { lineId: table.lineIds[1], reason: "renvoyé", approvedBy: v.ids.karim });
+  assert.deepEqual((await store.append([...table.events, voided], v.callers.phone)).rejected, []);
+  // the cut-off moves to 03:00: the open table, and its voided line, now belong to the day
+  const cutoff = v.office("settings.set", v.ids.tenant, { path: "hours.businessDayCutoff", value: "03:00" });
+  assert.deepEqual((await store.append([cutoff], v.callers.office)).rejected, []);
+  const kitNow = () => buildDay(store.pull(0, "office").events, { businessDate: day, cutoff: "03:00" });
+  assert.deepEqual(store.dailyReport(day), kitNow());
+  // the next morning the manager voids the table: one event, and the order leaves the day for the next one
+  const gone = v.ev({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    type: "order.voided",
+    entity: table.id,
+    data: { reason: "client parti", approvedBy: v.ids.karim },
+    at: v.at(34, 0),
+  });
+  assert.deepEqual((await store.append([gone], v.callers.phone)).rejected, []);
+  const kit = kitNow();
+  assert.deepEqual(store.dailyReport(day), kit);
+  assert.deepEqual(kit.voids, buildDay([], { businessDate: day, cutoff: "03:00" }).voids, "no void left on the day");
+});
+
+test("sales lines keep the category's tax class in force at closing, read from events stored before it", async () => {
+  const { v, store, all, tillBank } = await ready();
+  const lines = () => all("SELECT product_id, tax_class FROM sales_lines ORDER BY product_id");
+  // stored before the sale, but dated after its closing: not in force at closing
+  const drinksLater = v.office(
+    "catalog.category_set",
+    v.ids.drinks,
+    { name: { fr: "Boissons", ar: "مشروبات" }, station: "bar", taxClass: "food" },
+    v.at(20, 0),
+  );
+  assert.deepEqual((await store.append([drinksLater], v.callers.office)).rejected, []);
+  const sale = v.sale({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    bank: tillBank,
+    when: v.at(11, 0),
+    lines: [
+      ["noir", 1],
+      ["msemen", 1],
+    ],
+    pay: { tender: "cash", amount: 1500 },
+    receiptNo: "C1-000001",
+  });
+  assert.deepEqual((await store.append(sale.events, v.callers.till)).rejected, []);
+  const atClosing = [
+    { product_id: PRODUCTS.noir.productId, tax_class: "drink" },
+    { product_id: PRODUCTS.msemen.productId, tax_class: "food" },
+  ];
+  assert.deepEqual(lines(), atClosing);
+  // dated before the closing, but stored after it: the closing never saw it, and neither does a rebuild
+  const foodEarlier = v.office(
+    "catalog.category_set",
+    v.ids.food,
+    { name: { fr: "Cuisine", ar: "مطبخ" }, station: "cuisine", taxClass: "drink" },
+    v.at(10, 0),
+  );
+  assert.deepEqual((await store.append([foodEarlier], v.callers.office)).rejected, []);
+  assert.deepEqual(lines(), atClosing);
+  await store.rebuild();
+  assert.deepEqual(lines(), atClosing);
 });
 
 test("the store's SQL binds plain ? placeholders, which node:sqlite binds from Node 22.13 (package.json engines)", () => {

@@ -17,7 +17,7 @@ Per product (`cafe`, then `resto`):
 npx wrangler d1 create brandhub-cafe-registry --jurisdiction eu   # the jurisdiction is fixed at creation
 # put the printed database_id into env.staging.d1_databases of apps/cafe/worker/wrangler.jsonc, then:
 npx wrangler d1 migrations apply brandhub-cafe-registry --remote -c apps/cafe/worker/wrangler.jsonc --env staging
-node tools/scripts/build-web.mjs cafe
+node tools/scripts/build-web.mjs cafe staging   # the pages' CSP names env.staging's APP_ORIGIN, never production
 npx wrangler deploy -c apps/cafe/worker/wrangler.jsonc --env staging --no-x-provision   # creates the Durable Object class via migrations
 ```
 `node tools/scripts/staging.mjs` prints these commands for both products (it runs nothing). Create the D1 first:

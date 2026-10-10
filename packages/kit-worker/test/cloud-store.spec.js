@@ -316,6 +316,8 @@ describe("TenantStore (prompt 04 step 4)", () => {
 
     /** @type {Map<string, string>} the dead letters expected: event id → code */
     const expected = new Map();
+    /** @type {Map<string, string>} event id → the device that pushed it (the authenticated writer) */
+    const pushedBy = new Map();
     /**
      * Pushes a batch; `refused` lists the events it must refuse, with their codes, in order.
      * @param {EventEnvelope[]} events
@@ -327,7 +329,10 @@ describe("TenantStore (prompt 04 step 4)", () => {
       expect(r.rejected.map((x) => [x.id, x.code])).toEqual(refused.map(([e, code]) => [e.id, code]));
       const refusedIds = refused.map(([e]) => e.id);
       expect(r.accepted).toEqual(events.map((e) => e.id).filter((id) => !refusedIds.includes(id)));
-      for (const [e, code] of refused) expected.set(e.id, code);
+      for (const [e, code] of refused) {
+        expected.set(e.id, code);
+        pushedBy.set(e.id, caller.device);
+      }
     }
 
     // a till's event pushed by the phone: the caller is not the device that signed it
@@ -511,16 +516,18 @@ describe("TenantStore (prompt 04 step 4)", () => {
     expect(await count(stub, "events")).toBe(stored);
     expect(await count(stub, "deadletter")).toBe(dead);
 
-    // the dead letters: exactly the refused events, with their code, the signing device and the event as pushed
+    // the dead letters: exactly the refused events, with their code, the device that pushed them (not the device an
+    // event claims: the phone pushed the till's no-sale) and the event as pushed
     const letters = await rows(stub, "SELECT id, device, received_at, code, event, resolved_at FROM deadletter");
     expect(Object.fromEntries(letters.map((d) => [d.id, d.code]))).toEqual(Object.fromEntries(expected));
     for (const d of letters) {
       const ev = JSON.parse(/** @type {string} */ (d.event));
       expect(ev.id).toBe(d.id);
-      expect(d.device).toBe(ev.device);
+      expect(d.device).toBe(pushedBy.get(d.id));
       expect(d.received_at).toBeTypeOf("number");
       expect(d.resolved_at).toBeNull();
     }
+    expect(letters.find((d) => d.id === noSale.id)?.device).toBe(phone);
     expect(new Set(expected.values())).toEqual(
       new Set([
         "E_WRONG_DEVICE",

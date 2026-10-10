@@ -22,6 +22,8 @@ tester.run("bh/store-through-jurisdiction", storeThroughJurisdiction, {
     { code: 'const STORE_NAME = "x"; env.STORES; env.store;' },
     { code: "export default { fetch(request, env, ctx) { return ctx.exports.default.fetch(request); } };" },
     { code: 'import { DurableObject, WorkerEntrypoint } from "cloudflare:workers"; const exportsCount = 1;' },
+    { code: 'export { DurableObject, WorkerEntrypoint as Entry } from "cloudflare:workers";' },
+    { code: 'export { exports } from "./not-the-runtime.js";' },
   ],
   invalid: [
     { code: "env.STORE.idFromName(tenantId);", errors: direct },
@@ -54,6 +56,12 @@ tester.run("bh/store-through-jurisdiction", storeThroughJurisdiction, {
     { code: "const { CafeStore } = ctx.exports;", errors: loopback },
     { code: "const loop = ctx.exports; loop.CafeStore.getByName(t);", errors: loopback },
     { code: "const { exports } = ctx;", errors: loopback },
+    // a re-export carries the loopback map to another module under any name
+    { code: 'export { exports as loopback } from "cloudflare:workers";', errors: loopback },
+    { code: 'export { exports } from "cloudflare:workers";', errors: loopback },
+    { code: 'export { DurableObject, "exports" as lb } from "cloudflare:workers";', errors: loopback },
+    { code: 'export * from "cloudflare:workers";', errors: loopback },
+    { code: 'export * as cf from "cloudflare:workers";', errors: loopback },
   ],
 });
 
@@ -84,6 +92,20 @@ describe("eslint.config.js", () => {
       result.messages.map((m) => m.ruleId),
       Array(3).fill("bh/store-through-jurisdiction"),
     );
+  });
+
+  it("reports a runtime module that re-exports the loopback for the Workers' other files", async () => {
+    for (const code of [
+      'export { exports as loopback } from "cloudflare:workers";\n',
+      'export * from "cloudflare:workers";\n',
+    ]) {
+      const [result] = await eslint.lintText(code, { filePath: "apps/cafe/worker/src/runtime.js" });
+      assert.deepEqual(
+        result.messages.map((m) => m.ruleId),
+        ["bh/store-through-jurisdiction"],
+        code,
+      );
+    }
   });
 
   it("leaves the specs free to reach the binding (they test the helper against it)", async () => {

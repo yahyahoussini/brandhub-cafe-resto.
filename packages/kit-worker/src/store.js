@@ -176,14 +176,13 @@ export class Store {
         p.write(e, state);
       }
       for (const r of decision.rejected) {
-        // A dead letter needs the event's id (docs/04 §5); an event without a usable one is only answered.
+        // A dead letter needs the event's id (docs/04 §5); an event without a usable one is only answered. The first
+        // refusal is kept as written: a later copy of the id is only answered with it (sync-rules.js).
         if (r.id === null || r.id.length === 0 || r.id.length > 64) continue;
         sql
           .exec(
             `INSERT INTO deadletter (id, device, received_at, code, message, event) VALUES (?, ?, ?, ?, ?, ?)
-             ON CONFLICT (id) DO UPDATE SET device = excluded.device, received_at = excluded.received_at, code = excluded.code,
-               message = excluded.message, event = excluded.event
-             WHERE deadletter.resolved_at IS NULL`,
+             ON CONFLICT (id) DO NOTHING`,
             r.id,
             r.device,
             recvAt,

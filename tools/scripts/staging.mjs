@@ -114,14 +114,17 @@ export function stagingPlan(products) {
       `npx wrangler d1 migrations apply ${c.database} --remote ${cfg}`,
       "",
       `# 4. The PWA's files, then the Worker and its ${c.storeClass} class (Durable Object migration v1, SQLite storage)`,
-      `node tools/scripts/build-web.mjs ${product}`,
+      `node tools/scripts/build-web.mjs ${product} staging`,
       `npx wrangler deploy ${cfg} --no-x-provision`,
       "#    --no-x-provision: Wrangler stops instead of creating a missing database or bucket by itself (outside the EU).",
+      "#    The build writes the pages' Content-Security-Policy (dist/_headers) with env.staging's APP_ORIGIN as the",
+      "#    socket host, never production's; the Worker writes the same for /api/* and /r/*.",
       ...(c.appOrigin
         ? []
         : [
             `#    It prints the Worker's address, https://${c.worker}.<account>.workers.dev: write it into env.staging → vars →`,
-            "#    APP_ORIGIN, then run the deploy command once more so the Content-Security-Policy names it.",
+            "#    APP_ORIGIN, then run the build and the deploy commands once more so both Content-Security-Policies name",
+            "#    it (until then they allow the page's own host only, 'self').",
           ]),
       "",
       "# 5. Checks (prompt 04, acceptance checks 2 and 3): version, build and time; the resources and their jurisdiction",

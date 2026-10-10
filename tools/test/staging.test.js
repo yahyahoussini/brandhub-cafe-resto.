@@ -22,7 +22,7 @@ describe("tools/scripts/staging.mjs", () => {
         `npx wrangler d1 create brandhub-${p}-registry --jurisdiction eu`,
         `npx wrangler r2 bucket create brandhub-${p}-files --jurisdiction eu`,
         `npx wrangler d1 migrations apply brandhub-${p}-registry --remote ${cfg}`,
-        `node tools/scripts/build-web.mjs ${p}`,
+        `node tools/scripts/build-web.mjs ${p} staging`,
         `npx wrangler deploy ${cfg} --no-x-provision`,
         `curl -s https://brandhub-${p}-staging.<account>.workers.dev/api/health`,
         `curl -sI https://brandhub-${p}-staging.<account>.workers.dev/api/health`,

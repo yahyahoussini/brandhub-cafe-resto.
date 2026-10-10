@@ -279,6 +279,16 @@ export class Projections {
   }
 
   /**
+   * The refusal of an event pushed before (docs/04 §5), resolved or not.
+   * @param {string} id
+   * @returns {{ code: string, message: string } | null}
+   */
+  deadLetter(id) {
+    const row = this.#one("SELECT code, message FROM deadletter WHERE id = ?", id);
+    return row ? { code: String(row.code), message: String(row.message ?? "") } : null;
+  }
+
+  /**
    * A device of the directory (`device.set`).
    * @param {string} id
    * @returns {{ kind: string | null, prefix: string | null, at: number, writer: string, eventId: string } | null}
@@ -371,12 +381,14 @@ export class Projections {
    * @param {Set<string>} days
    */
   #writeOrder(ev, s, days) {
-    const prev = this.#one("SELECT business_at, business_date FROM orders WHERE id = ?", s.id);
+    const prev = this.#one("SELECT business_at FROM orders WHERE id = ?", s.id);
     // The business day of an order is that of its closing or voiding, else its opening (reports.js), at the server's
     // time for a clock-skewed event (effectiveAt).
     const businessAt = !prev || s.status !== "open" ? effectiveAt(ev) : /** @type {number} */ (prev.business_at);
     const day = this.dayOf(businessAt);
-    if (prev && prev.business_date !== day) days.add(prev.business_date);
+    // the day the order leaves, under the cut-off in force now (its stored business_date may predate a cut-off change)
+    const was = prev ? this.dayOf(/** @type {number} */ (prev.business_at)) : day;
+    if (was !== day) days.add(was);
     days.add(day);
     this.#upsert("orders", ["id"], {
       id: s.id,
@@ -596,7 +608,7 @@ export class Projections {
    * @param {Set<string>} days
    */
   #bankMoney(bankId, days) {
-    const row = this.#one("SELECT state, business_date FROM banks WHERE id = ?", bankId);
+    const row = this.#one("SELECT state, business_at FROM banks WHERE id = ?", bankId);
     if (!row) return;
     /** @type {BankState} */
     const bank = JSON.parse(row.state);
@@ -614,7 +626,8 @@ export class Projections {
       cashVariance(bank, cash),
       bankId,
     );
-    days.add(row.business_date);
+    // the bank's day under the cut-off in force now: its stored business_date may predate a cut-off change
+    days.add(this.dayOf(/** @type {number} */ (row.business_at)));
   }
 
   /**

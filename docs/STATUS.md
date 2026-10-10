@@ -18,7 +18,7 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
 | 01 | Repository scaffold | done | 4 Oct 2026 | Node v22.22.0, npm 10.9.4, TypeScript 5.9.3, ESLint 9.39.5, Prettier 3.9.9, Playwright 1.56.1. `npm ci && npm run gate` passes, 94 tests (kit 75 + `bh/logical-css` 19). Details below. |
 | 02 | Design system, fonts, UI parts, i18n | done | 9 Oct 2026 | `npm run gate` passes, 109 tests. `npm run contrast`: 52/52 used pairs pass. 21 Playwright runs pass (16 style guide, 5 behaviour), no external host. UI kit 10.4 KB gzip (21.7 KB with Preact, signals, Lucide), CSS 5.0 KB, fonts 208 KB. Review fixes in a second commit. Details below. |
 | 03 | Business rules: events, marks, stock, reports, permissions | done | 9 Oct 2026 | `npm run gate` passes, 172 tests (kit 138). The café acceptance day of docs/01 §6 gives every number of the spec. Four bugs of the provided kit fixed after a failing test (prompt 00 findings 1, 2, 8, 9). Review fixes in a second commit. Details below. |
-| 04 | Cloud store: one SQLite database per client | built; staging not run | 10 Oct 2026 | `npm run gate` passes: 253 node tests, 64 Worker tests in workerd (after verification round 1). The café acceptance day pushed to a store gives the kit's report. Append of 200 events: median 71 ms (local workerd). compatibility_date 2026-10-06. Staging (step 5, checks 2–3) not run: no Cloudflare account access here. Details below. |
+| 04 | Cloud store: one SQLite database per client | built; staging not run | 10 Oct 2026 | `npm run gate` passes: 276 node tests, 64 Worker tests in workerd (after two verification rounds). The café acceptance day pushed to a store gives the kit's report. Append of 200 events: median 71 ms (local workerd). compatibility_date 2026-10-06. Staging (step 5, checks 2–3) not run: no Cloudflare account access here. Details below. |
 
 ## Current state
 - Kit (`packages/kit/src`), 138 unit tests:
@@ -105,6 +105,18 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
       `?`): `engines` is `>=22.13`, README and prompt 00 say so;
     - docs: `E_UNKNOWN_DEVICE` covers a transfer to a device that is not a till or phone; `customers` holds ids only;
       the clock-skew test now proves the business day of a skewed sale.
+  - Verification round 2 (fresh reviewers on the fixed code, 17 findings confirmed and fixed, 2 refuted):
+    - a later push of an already refused id overwrote its dead letter (device, time, code); the first refusal is now
+      kept, the row names the authenticated writer, and a dead-lettered id is never decided again (docs/04 §5);
+    - after a take-over, the old owner's late events got `E_SEQ` instead of `E_NOT_OWNER` (docs/04 §9);
+    - `C1-1`, `C1-0000001` and `C1-0` passed as distinct receipt numbers; only the 6-digit form from 1 is accepted;
+    - data nested deep enough to break the hashing aborted the whole batch; it is now refused alone (`E_BAD_DATA`);
+    - a cut-off change could serve a stale day report; the day an order or bank leaves is marked for recomputation;
+    - screens did not receive `line.qty_changed`;
+    - the lint rule now also catches re-exports of the loopback `exports`;
+    - the static `_headers` CSP names each environment's socket host (`build-web.mjs <p> staging|production`);
+    - the root Vitest run fails if a Worker project runs no spec file;
+    - new tests for push rules, the pull scope per device kind, the cut-off change and the tax class at closing.
 - Apps: no screen yet. Workspaces (prompt 01): `@brandhub/kit-web`, `@brandhub/kit-worker`, `@brandhub/cafe-worker`,
   `@brandhub/cafe-web`, `@brandhub/resto-worker`, `@brandhub/resto-web`, `@brandhub/station`, `@brandhub/tools`. The
   two web apps serve only the dev style guide (prompt 02); the Workers and the Station have no source yet.
@@ -334,6 +346,12 @@ evening-report template has no dead-letter variable (before prompt 18).
   so there is no flag yet. Decide where it lives (a column through a migration, a table, or a dead-letter category) before
   prompt 06/19.
 - The store uses `Africa/Casablanca`; the registry's per-client `time_zone` is not passed to it yet (prompt 05/07).
+- Screens: the store's pull filters by device kind only; a screen receives the line events of every order open or ended
+  less than 6 h ago, all stations and unsent lines included (docs/04 §3 records it). Filtering by station and sent state
+  belongs to the prompt 06 pull endpoint (it knows the device) or the prompt 30 screen.
+- The registry's `owner_logins.email_hmac` needs its key chosen in prompt 05: a separate Worker secret (e.g.
+  `EMAIL_LOOKUP_KEY`) or a subkey of `DATA_KEY`, and its rotation; then docs/08 §5's key table, docs/02 §4 and the
+  staging secret list name it.
 - `approvedBy` is not yet checked against staff who may approve (prompt 05).
 - At pilot scale only: stock levels recompute over every closed order (incremental in prompt 16); `rebuild()` runs in
   one transaction (may approach the Durable Object CPU limit on a very large log).

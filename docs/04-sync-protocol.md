@@ -16,7 +16,8 @@ the cloud; with neither, it queues. The cloud's TenantStore is the authority: it
 { "events": [ { "id": "…", "type": "line.added", "entity": "ord_…", "seq": 2, "device": "dev_…", "staff": "stf_…", "at": 1764486000000, "data": { }, "v": 1 } ],
   "deviceTime": 1764486000500 }
 ```
-- At most 200 events, in the device's creation order. Body ≤ 512 KB; each event's `data` ≤ 16 KB.
+- At most 200 events, in the device's creation order. Body ≤ 512 KB; each event's `data` ≤ 16 KB and at most 32
+  levels of objects and arrays deep (the chain hashes its canonical JSON level by level; deeper data is `E_BAD_DATA`).
 - The server handles events one by one: envelope check → device and staff belong to the tenant → the event's `device`
   equals the caller, or the caller is the tenant's Station relaying (`relayedBy`) → the type is allowed for the device
   kind → the kit rule for its aggregate (sequenced: `applyOrderEvent` / `applyBankEvent` against the current state;
@@ -32,12 +33,17 @@ the cloud; with neither, it queues. The cloud's TenantStore is the authority: it
   revoked (`E_UNKNOWN_DEVICE`, `E_DEVICE_REVOKED`); the caller signs its own events unless it is the client's Station
   relaying (`E_WRONG_DEVICE`); a receipt number is used once per client (`E_DUP_RECEIPT`) and belongs to the closing
   device's series: its prefix for a sale, `T` + its prefix for a TEST order, and a device without a prefix closes no
-  order (`E_BAD_DATA`); payment ids are unique across orders (`E_DUP_PAYMENT`); an order is transferred only to a till
-  or phone of the client (`E_UNKNOWN_DEVICE`); tip-pool events are refused (`E_BAD_EVENT`) until prompt 21 builds
-  their rules. A push over 200 events or 512 KB is refused whole (`E_TOO_LARGE`, HTTP 413) before anything is stored;
-  the device splits it, never between the two events of a move.
+  order (`E_BAD_DATA`); it is written as `receipts.js` writes it, the number from 1 with six digits at least
+  (`C1-000001`, never `C1-1` or `C1-000000`, `E_BAD_DATA`), so one number has one spelling; payment ids are unique
+  across orders (`E_DUP_PAYMENT`); an order is transferred only to a till or phone of the client (`E_UNKNOWN_DEVICE`);
+  tip-pool events are refused (`E_BAD_EVENT`) until prompt 21 builds their rules. A push over 200 events or 512 KB is
+  refused whole (`E_TOO_LARGE`, HTTP 413) before anything is stored; the device splits it, never between the two
+  events of a move.
 - A rejected event in a sequenced aggregate blocks that aggregate's later events in the same batch (`E_SEQ_BLOCKED`);
   other aggregates continue.
+- An event for an order or a bank that another device now holds (after a transfer or a take-over) is refused
+  `E_NOT_OWNER` before its `seq` is looked at: the take-over used the seq the old owner writes next, so the old owner's
+  late events are `E_NOT_OWNER`, and `E_SEQ` stays a gap in the owner's own events (§5, §9).
 - Response:
 ```json
 { "accepted": ["id…"], "duplicates": ["id…"], "rejected": [{ "id": "…", "code": "E_NOT_OWNER", "message": "…" }],
@@ -45,17 +51,26 @@ the cloud; with neither, it queues. The cloud's TenantStore is the authority: it
 ```
 - Duplicates (an id already stored) are acknowledged, never stored twice. An id repeated in one batch is decided once: a
   later copy is acknowledged as a duplicate when the first was stored, and gets no answer of its own when the first was
-  rejected (the id is in `rejected` once). The device moves rejected events to its dead-letter list. It removes an event
-  from its outbox only when the cloud has it: when the cloud answered `accepted` or `duplicates`, or when the Station
-  reports it relayed (`cloudConfirmed` in its pull and wait answers). An event only the Station holds stays in the
-  outbox, marked as accepted there (it is not pushed to the Station again), so a device that changes hop pushes it to
-  the cloud before anything newer of the same aggregate.
+  rejected (the id is in `rejected` once). An id the cloud refused in an earlier push gets that first refusal back,
+  never a new decision: a retry after a lost answer (§10.4) is answered the same, a refused event never enters the log
+  later, and its dead letter is never rewritten. The device moves rejected events to its dead-letter list. It removes
+  an event from its outbox only when the cloud has it: when the cloud answered `accepted` or `duplicates`, or when the
+  Station reports it relayed (`cloudConfirmed` in its pull and wait answers). An event only the Station holds stays in
+  the outbox, marked as accepted there (it is not pushed to the Station again), so a device that changes hop pushes it
+  to the cloud before anything newer of the same aggregate.
 
 ## 3. Pull and live updates
 `GET /api/sync/pull?after=<pos>&limit=500` → `{ events, last, more, licence?, serverTime }`
 - The server filters by device kind: tills and phones get catalog, settings, staff, layout, other devices' open orders
   and banks (for transfers and table states), kitchen status; screens get sent lines for their station and kitchen
-  status; the back office gets everything. `licence` is included when it changed since the device's last pull.
+  status; the back office gets everything.
+  As built in prompt 04, the store filters by kind only: `pull(after, kind)` does not know which screen is asking. A
+  screen gets the kitchen status, the catalog and layout marks, how each order ends, and the line events (`order.opened`,
+  `line.added`, `line.qty_changed`, `line.voided`, `lines.sent`, `lines.fired`, moves, `order.moved`, covers, note) of
+  every order open or ended less than 6 hours ago, for every station and before sending too: a line's content comes
+  before its `lines.sent` in the log, so a position cursor cannot send it afterwards. Keeping only the sent lines of the
+  screen's station (and every station for a pass screen) is done by the pull endpoint, which knows the device (prompt
+  06), or by the screen itself (prompt 30). `licence` is included when it changed since the device's last pull.
 - Live updates from the cloud: `GET /api/sync/socket` upgrades to a WebSocket held by the TenantStore with the
   hibernation API (no duration billed while idle); the store sends `{"last": pos}` nudges and the device pulls.
 - Live updates from the Station: `GET /station/wait?after=<lanPos>&timeout=25` (long-poll over `fetch`), because
@@ -69,7 +84,9 @@ the cloud; with neither, it queues. The cloud's TenantStore is the authority: it
   a new status at the next shift opening (D14). `serverTime` feeds the trusted clock.
 
 ## 5. Dead letters
-A rejected event is never edited or re-sent. The device shows the manager "À vérifier (N)" with the code in plain
+A rejected event is never edited or re-sent. The cloud keeps the first refusal of each id as written, with the device
+that pushed it (the relayed device when a Station relays it, never a device the event only claims); the same id pushed
+again only gets that refusal back (§2). The device shows the manager "À vérifier (N)" with the code in plain
 words; the back office lists them with the event's content. Resolutions are new events (for example a new order entered
 by the manager with the note "reprise ticket refusé") and `deadletter.resolved {how, note}`, whose entity is the
 rejected event's id (docs/03 §5), marks the item done.

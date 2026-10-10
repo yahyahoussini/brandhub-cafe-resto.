@@ -740,16 +740,24 @@ function sameModifiers(a, b) {
   return a.every((m, i) => b[i] && b[i].id === m.id && b[i].priceCentimes === m.priceCentimes);
 }
 
+/** A snapshot's optional text as buildLine keeps it ("" and missing are null). @param {unknown} v */
+function orNull(v) {
+  return v === undefined || v === null || v === "" ? null : v;
+}
+
 /**
  * Cross-aggregate rule of docs/04 §2 (E_MOVE_PAIR): `lines.moved_out` on the source and `lines.moved_in` on the target
- * are one move. Same `moveId`, written by the same device, each naming the other order, and the target receives
- * exactly the lines that left the source, unchanged (product, price, options, quantity, rate, doses, sent and held
- * state): a move never reprices a line. The stores keep both events or refuse both.
+ * are one move. Same `moveId`, written by the same device, each naming the other order, between two orders of the same
+ * kind (TEST or real: a sold line never leaves the reports through a TEST order), and the target receives exactly the
+ * lines that left the source, unchanged (product, name, category, station, price, options, quantity, rate, doses, sent
+ * and held state): a move never reprices a line nor changes its tax class or its kitchen. The stores keep both events
+ * or refuse both.
  * @param {OrderEvent} out `lines.moved_out`
  * @param {OrderEvent} inn `lines.moved_in`
  * @param {OrderState} source the source order before `out`
+ * @param {OrderState | null} target the target order before `inn` (null when it is not opened before the move)
  */
-export function assertMovePair(out, inn, source) {
+export function assertMovePair(out, inn, source, target) {
   /** @param {string} m */
   const bad = (m) => fail("E_MOVE_PAIR", m);
   if (out.type !== "lines.moved_out" || inn.type !== "lines.moved_in") throw bad("a move is lines.moved_out and lines.moved_in");
@@ -758,6 +766,8 @@ export function assertMovePair(out, inn, source) {
   if (source.id !== out.entity || out.data.toOrderId !== inn.entity || inn.data.fromOrderId !== out.entity) {
     throw bad("each event of a move names the other order");
   }
+  if (!target || target.id !== inn.entity) throw bad(`the target order ${inn.entity} is opened before the move`);
+  if (target.training !== source.training) throw bad("TEST and real orders never exchange lines");
   const ids = Array.isArray(out.data.lineIds) ? out.data.lineIds : [];
   const snaps = Array.isArray(inn.data.lines) ? inn.data.lines : [];
   if (ids.length === 0 || ids.length !== snaps.length) throw bad("the target receives exactly the lines that left the source");
@@ -767,6 +777,10 @@ export function assertMovePair(out, inn, source) {
     if (!line || !snap) throw bad(`line ${id} is not in both events`);
     const same =
       snap.productId === line.productId &&
+      snap.name?.fr === line.name.fr &&
+      snap.name?.ar === line.name.ar &&
+      orNull(snap.category) === line.category &&
+      orNull(snap.station) === line.station &&
       snap.unitCentimes === line.unitCentimes &&
       snap.qtyMilli === line.qtyMilli &&
       snap.vatBp === line.vatBp &&

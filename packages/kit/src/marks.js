@@ -297,6 +297,12 @@ function checkMarkData(ev) {
       if (!Number.isSafeInteger(d.yieldMilli) || d.yieldMilli <= 0) throw bad("yieldMilli must be positive");
       if (!Number.isSafeInteger(d.effectiveFrom)) throw bad("effectiveFrom must be Unix ms");
       break;
+    case "device.set":
+      // docs/03 §7: tills C1, C2 …, waiter phones S1, S2 …; a TEST order uses "T" + the prefix (receipts.js newSeries).
+      if (d.prefix !== undefined && d.prefix !== null && (typeof d.prefix !== "string" || !/^[CS]\d{1,3}$/.test(d.prefix))) {
+        throw bad("prefix must be C or S and 1 to 3 digits (C1, S1…)");
+      }
+      break;
     case "day.closed":
       if (!isDate(d.businessDate)) throw bad("businessDate must be a real YYYY-MM-DD date");
       break;

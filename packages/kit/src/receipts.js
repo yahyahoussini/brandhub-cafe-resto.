@@ -20,11 +20,13 @@ export const DEFAULT_LOW_WATER = 150;
  */
 
 /**
- * @param {string} prefix
+ * @param {string} prefix a device's series ("C1", "S12") or its training series ("TC1", "TC999": "T" + the prefix)
  * @returns {SeriesLedger}
  */
 export function newSeries(prefix) {
-  if (!/^[A-Z][A-Z0-9]{0,3}$/.test(prefix)) throw new RangeError("prefix must be 1–4 capital letters or digits, starting with a letter");
+  if (!/^T?[A-Z][A-Z0-9]{0,3}$/.test(prefix)) {
+    throw new RangeError("prefix must be 1–4 capital letters or digits starting with a letter, with T before it for a training series");
+  }
   return { prefix, lastEnd: 0, blocks: [] };
 }
 

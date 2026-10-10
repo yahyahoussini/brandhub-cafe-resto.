@@ -11,7 +11,7 @@ code is written.
 `packages/kit/src/*.js` and their tests.
 
 ## Do
-1. Check the environment: `node -v` (≥ 22.12), `git --version`, `npm test` (the kit's tests must all pass).
+1. Check the environment: `node -v` (≥ 22.13), `git --version`, `npm test` (the kit's tests must all pass).
 2. `git init`, commit the pack exactly as received.
 3. Read everything listed. Then write, in your answer, a numbered list (at most 15) of contradictions or gaps between
    `DECISIONS.md`, the docs, the data files and the kit's code, each with file and line and the fix you propose. Say

@@ -59,6 +59,11 @@ test("receipt and invoice formats", () => {
   assert.throws(() => newSeries("c1"), RangeError);
 });
 
+test("a series is a device's prefix or its training series (T + prefix), as long as the block prefixes allow", () => {
+  for (const prefix of ["C1", "S12", "C999", "TC1", "TS12", "TC999"]) assert.equal(newSeries(prefix).prefix, prefix);
+  for (const prefix of ["", "1C", "TC1-", "C1000X", "TTC999"]) assert.throws(() => newSeries(prefix), RangeError);
+});
+
 test("after a reset, the rest of the block is declared abandoned", () => {
   let ledger = newSeries("C1");
   ledger = reserveBlock(ledger, "blk_1", 500).ledger;

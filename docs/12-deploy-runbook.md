@@ -22,11 +22,15 @@ npx wrangler deploy -c apps/cafe/worker/wrangler.jsonc --env staging --no-x-prov
 ```
 `node tools/scripts/staging.mjs` prints these commands for both products (it runs nothing). Create the D1 first:
 Wrangler 4.149 creates a missing D1 by itself at deploy, without a jurisdiction; `--no-x-provision` stops that.
+Always pass `--env`: the top level of each wrangler.jsonc is local only (`wrangler dev` and the tests). It is named
+`brandhub-<product>-local` and has no workers.dev URL, and its REGISTRY `database_id` is `local-only` (the key of the
+local database), so a deploy without `--env` never reaches the production name, and Wrangler neither binds the staging
+registry by its name nor creates a registry outside the EU.
 R2: create `brandhub-cafe-files` in the EU jurisdiction (dashboard → R2 → Create bucket → Specify jurisdiction → EU, or
 `npx wrangler r2 bucket create … --jurisdiction eu` if the installed Wrangler offers the flag) and declare
 `"jurisdiction": "eu"` in the binding. Record in STATUS where each resource lives.
 Secrets (`npx wrangler secret put <NAME> -c apps/cafe/worker/wrangler.jsonc --env staging`; without `--env` the secret
-goes to the top-level Worker, which carries the production name): `CONTROL_PUBLIC_KEYS`,
+goes to the top-level Worker `brandhub-cafe-local`, which is never deployed): `CONTROL_PUBLIC_KEYS`,
 `LICENCE_PUBLIC_KEYS`, `DATA_KEY`, `EXPORT_KEY`, `WHATSAPP_TOKEN`, `RESEND_API_KEY`. Values never appear in the terminal
 history: paste them when Wrangler asks.
 

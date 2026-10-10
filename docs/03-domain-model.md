@@ -81,7 +81,7 @@ Values column of §8).
 | `order.transferred` | `toDevice` | by the owner |
 | `order.taken_over` | `approvedBy`, `reason` | by another device; the old owner's later events go to review |
 | `order.customer_set` | `customerId` (`cus_…` or null) | while open (Kredi, stamp card, deliveries) |
-| `lines.moved_out` / `lines.moved_in` | `moveId`, `toOrderId` + `lineIds` / `fromOrderId` + `lines` (snapshots with their sent, held and fired state) | merge, split, part of a bill to another table: a pair with the same `moveId`, written by the device that owns both orders, stored in one transaction or refused together (`E_MOVE_PAIR`); no approval, no void, no second ticket |
+| `lines.moved_out` / `lines.moved_in` | `moveId`, `toOrderId` + `lineIds` / `fromOrderId` + `lines` (snapshots with their sent, held and fired state) | merge, split, part of a bill to another table: a pair with the same `moveId`, written by the device that owns both orders, into a target opened before the move, between two orders of the same kind (TEST or real), each line unchanged (product, name, category, station, price, options, quantity, rate, doses, sent and held state), stored in one transaction or refused together (`E_MOVE_PAIR`); no approval, no void, no second ticket |
 
 Tenders: `cash`, `card_external` (reference = terminal slip code), `maroc_pay` (reference), `transfer`, `voucher`,
 `credit` (Kredi, reference = `cus_…`), `other`.
@@ -163,8 +163,8 @@ rate and amount, doses, zone, staff, device, business date, hour) ·
 `payments` · `banks` (with expected, counted, variance) · `catalog_*` · `staff` · `devices` (token hash, kind, prefix,
 station, paired/revoked/last seen, app version) · `zones`, `tables` · `stock_items`, `stock_levels`, `stock_movements` ·
 `machine_readings` · `receipt_series` (ledger per till) · `settings` (path, value, at, event id) · `daily` (business date,
-revenue, tickets, covers, VAT by rate, tenders, voids, no-sales, reprints, cash gaps, dose gaps) · `customers` (Kredi,
-phone encrypted) · `kitchen_tickets` (Resto).
+revenue, tickets, covers, VAT by rate, tenders, voids, no-sales, reprints, cash gaps, dose gaps) · `customers` (Kredi:
+the `cus_…` ids seen in events; the personal fields are in `customers_pii`, outside the log) · `kitchen_tickets` (Resto).
 Non-event tables: `owners` (email, PBKDF2 hash, salt, iterations, TOTP secret encrypted, role), `sessions`,
 `activations` (token hash, code hash, expiry, used), `licence` (token, payload, status), `messages` (channel, kind,
 recipient hash, status, count), `auth_log` (90 days), `heartbeats`, and the personal-data tables below.
@@ -202,8 +202,9 @@ numbering), `customers` (today's personal-data rows, 7 days), `catalog`,
 
 ## 7. Receipt numbers (`receipts.js`, D22)
 Every device that closes orders has a prefix: tills `C1`, `C2` …, waiter phones `S1`, `S2` …, set at pairing and never
-reused. The cloud keeps each series' ledger and reserves blocks of 500; a device asks for the next block when fewer than
-150 numbers remain. A Station keeps a pool of two blocks per device, reserved from the cloud in advance, to hand out
+reused (`C` or `S` and 1 to 3 digits: `validateMark` refuses any other `device.set` prefix, `E_BAD_DATA`); its TEST
+orders take the training series `T` + prefix (`TC1`). The cloud keeps each series' ledger and reserves blocks of 500;
+a device asks for the next block when fewer than 150 numbers remain. A Station keeps a pool of two blocks per device, reserved from the cloud in advance, to hand out
 while offline. The number is taken when the order closes. At re-pairing after a reset, the cloud writes
 `receipts.block_abandoned` from the last number it has seen, and the device gets a fresh block.
 
@@ -252,9 +253,10 @@ The kit throws `OrderRuleError` / `BankRuleError` / `EventError` with a `code` (
 `E_LINE_MOVED`, `E_BANK_UNKNOWN`, `E_BANK_CLOSED`; sync-level codes (docs/04): `E_SEQ_BLOCKED`, `E_DEVICE_REVOKED`,
 `E_FORBIDDEN_TYPE`, `E_TOO_LARGE` (an event's data over 16 KB, or a whole push over 200 events or 512 KB, refused
 before any event is stored), `E_UNKNOWN_STAFF`, `E_MOVE_PAIR`, `E_REFUND_EXCEEDS`, `E_UNKNOWN_DEVICE` (the event's
-device, or the relaying Station, is not in the client's device directory), `E_WRONG_DEVICE` (an event signed by
-another device than the caller, which is not the client's Station relaying it; or a caller whose kind is not its
-device's), `E_DUP_RECEIPT` (a receipt number already used by another order of the client); store-level code (prompt 04):
+device, or the relaying Station, is not in the client's device directory; or the device an order is transferred to is
+not a till or phone of the client), `E_WRONG_DEVICE` (an event signed by another device than the caller, which is not
+the client's Station relaying it; or a caller whose kind is not its device's), `E_DUP_RECEIPT` (a receipt number
+already used by another order of the client); store-level code (prompt 04):
 `E_SCHEMA_NEWER` (the client's database was migrated by newer code; the store refuses to start, roll forward);
 HTTP-level codes of the product Workers' `/api/*` (prompt 04, body `{ "code": "E_…" }`): `E_NOT_FOUND` (404, unknown
 path), `E_METHOD` (405, known path with another method, `Allow` header), `E_INTERNAL` (500, unexpected error; the log

@@ -222,13 +222,13 @@ export class Store {
       ? sql.exec("SELECT * FROM events WHERE pos > ? ORDER BY pos LIMIT ?", after, max + 1).toArray()
       : sql
           .exec(
-            `SELECT e.* FROM events e WHERE e.pos > ?1 AND (
-               e.type IN (SELECT value FROM json_each(?2))
-               OR (e.type IN (SELECT value FROM json_each(?3)) AND EXISTS (SELECT 1 FROM orders o WHERE o.id = e.entity AND o.status = 'open'))
-               OR (e.type IN (SELECT value FROM json_each(?4)) AND EXISTS (SELECT 1 FROM banks b WHERE b.id = e.entity AND b.status <> 'closed'))
-               OR (e.type IN (SELECT value FROM json_each(?5))
-                   AND EXISTS (SELECT 1 FROM orders o WHERE o.id = e.entity AND (o.status = 'open' OR o.business_at >= ?6)))
-             ) ORDER BY e.pos LIMIT ?7`,
+            `SELECT e.* FROM events e WHERE e.pos > ? AND (
+               e.type IN (SELECT value FROM json_each(?))
+               OR (e.type IN (SELECT value FROM json_each(?)) AND EXISTS (SELECT 1 FROM orders o WHERE o.id = e.entity AND o.status = 'open'))
+               OR (e.type IN (SELECT value FROM json_each(?)) AND EXISTS (SELECT 1 FROM banks b WHERE b.id = e.entity AND b.status <> 'closed'))
+               OR (e.type IN (SELECT value FROM json_each(?))
+                   AND EXISTS (SELECT 1 FROM orders o WHERE o.id = e.entity AND (o.status = 'open' OR o.business_at >= ?)))
+             ) ORDER BY e.pos LIMIT ?`,
             after,
             JSON.stringify(scope.types),
             JSON.stringify(scope.openOrderTypes),

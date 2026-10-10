@@ -24,15 +24,18 @@ the cloud; with neither, it queues. The cloud's TenantStore is the authority: it
 - Cross-aggregate checks (device, Station and cloud alike): money that lands in a bank (`payment.added`,
   `payment.voided`, cash `kredi.repaid`) passes `assertBankAccepts` — the bank is held by the writing device and still
   open; a move is a pair (`lines.moved_out` then `lines.moved_in`, same `moveId`, same batch) stored in one transaction
-  or refused together (`E_MOVE_PAIR`); a credit note never refunds more than what is left of its ticket
-  (`E_REFUND_EXCEEDS`).
+  or refused together (`E_MOVE_PAIR`), into a target order opened before it, between two orders of the same kind (a
+  TEST order and a real one never exchange lines), each line arriving unchanged (product, name, category, station,
+  price, options, quantity, rate, doses, sent and held state: `assertMovePair`); a credit note never refunds more than
+  what is left of its ticket (`E_REFUND_EXCEEDS`).
 - Also checked by the cloud store (prompt 04): the event's device is in the client's directory (`device.set`) and not
   revoked (`E_UNKNOWN_DEVICE`, `E_DEVICE_REVOKED`); the caller signs its own events unless it is the client's Station
   relaying (`E_WRONG_DEVICE`); a receipt number is used once per client (`E_DUP_RECEIPT`) and belongs to the closing
-  device's series; payment ids are unique across orders (`E_DUP_PAYMENT`); an order is transferred only to a till or
-  phone of the client; tip-pool events are refused (`E_BAD_EVENT`) until prompt 21 builds their rules. A push over 200
-  events or 512 KB is refused whole (`E_TOO_LARGE`, HTTP 413) before anything is stored; the device splits it, never
-  between the two events of a move.
+  device's series: its prefix for a sale, `T` + its prefix for a TEST order, and a device without a prefix closes no
+  order (`E_BAD_DATA`); payment ids are unique across orders (`E_DUP_PAYMENT`); an order is transferred only to a till
+  or phone of the client (`E_UNKNOWN_DEVICE`); tip-pool events are refused (`E_BAD_EVENT`) until prompt 21 builds
+  their rules. A push over 200 events or 512 KB is refused whole (`E_TOO_LARGE`, HTTP 413) before anything is stored;
+  the device splits it, never between the two events of a move.
 - A rejected event in a sequenced aggregate blocks that aggregate's later events in the same batch (`E_SEQ_BLOCKED`);
   other aggregates continue.
 - Response:
@@ -40,11 +43,13 @@ the cloud; with neither, it queues. The cloud's TenantStore is the authority: it
 { "accepted": ["id…"], "duplicates": ["id…"], "rejected": [{ "id": "…", "code": "E_NOT_OWNER", "message": "…" }],
   "last": 18234, "serverTime": 1764486000800 }
 ```
-- Duplicates (an id already stored) are acknowledged, never stored twice. The device moves rejected events to its
-  dead-letter list. It removes an event from its outbox only when the cloud has it: when the cloud answered `accepted` or
-  `duplicates`, or when the Station reports it relayed (`cloudConfirmed` in its pull and wait answers). An event only the
-  Station holds stays in the outbox, marked as accepted there (it is not pushed to the Station again), so a device that
-  changes hop pushes it to the cloud before anything newer of the same aggregate.
+- Duplicates (an id already stored) are acknowledged, never stored twice. An id repeated in one batch is decided once: a
+  later copy is acknowledged as a duplicate when the first was stored, and gets no answer of its own when the first was
+  rejected (the id is in `rejected` once). The device moves rejected events to its dead-letter list. It removes an event
+  from its outbox only when the cloud has it: when the cloud answered `accepted` or `duplicates`, or when the Station
+  reports it relayed (`cloudConfirmed` in its pull and wait answers). An event only the Station holds stays in the
+  outbox, marked as accepted there (it is not pushed to the Station again), so a device that changes hop pushes it to
+  the cloud before anything newer of the same aggregate.
 
 ## 3. Pull and live updates
 `GET /api/sync/pull?after=<pos>&limit=500` → `{ events, last, more, licence?, serverTime }`

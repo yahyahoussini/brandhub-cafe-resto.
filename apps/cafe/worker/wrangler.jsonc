@@ -6,7 +6,10 @@
 // - env.staging: `npx wrangler deploy -c apps/cafe/worker/wrangler.jsonc --env staging`
 //   → brandhub-cafe-staging.<account>.workers.dev, demo tenants only.
 // - env.production: cafe.brandhub.ma, from the release prompt (20) on (docs/12 §5).
-// Always deploy with --env: the top level is not a deploy target.
+// Always deploy with --env: the top level is not a deploy target. It carries a name no environment deploys
+// (brandhub-cafe-local), no workers.dev or preview URL, and a REGISTRY whose database_id ("local-only") names no
+// Cloudflare database, so a `wrangler deploy` without --env never reaches the production name, and Wrangler neither
+// binds the staging registry by its name nor creates a registry outside the EU jurisdiction (docs/12 §2).
 // Environments inherit main, compatibility_date, assets, migrations and triggers, but not bindings or vars: each env
 // repeats durable_objects, d1_databases, r2_buckets, version_metadata and vars.
 //
@@ -16,8 +19,10 @@
 //   value when Wrangler asks); locally in apps/cafe/worker/.dev.vars (git-ignored).
 {
   "$schema": "../../../node_modules/wrangler/config-schema.json",
-  "name": "brandhub-cafe",
+  "name": "brandhub-cafe-local",
   "main": "src/index.js",
+  "workers_dev": false,
+  "preview_urls": false,
   // The newest date the installed workerd (1.20261006.1, Wrangler 4.149) supports, so local tests run what Cloudflare
   // runs (prompt 04, 10 Oct 2026).
   "compatibility_date": "2026-10-06",
@@ -39,11 +44,13 @@
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CafeStore"] }],
 
   // The registry. Created with `npx wrangler d1 create brandhub-cafe-registry --jurisdiction eu` (the jurisdiction is
-  // fixed at creation, docs/12 §2). Its migrations are shared by both products.
+  // fixed at creation, docs/12 §2). Its migrations are shared by both products. Locally, "local-only" is only the key
+  // of the Miniflare database in .wrangler/.
   "d1_databases": [
     {
       "binding": "REGISTRY",
       "database_name": "brandhub-cafe-registry",
+      "database_id": "local-only",
       "migrations_dir": "../../../packages/kit-worker/migrations/registry",
     },
   ],

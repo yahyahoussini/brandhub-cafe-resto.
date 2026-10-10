@@ -4,6 +4,10 @@
  * `jurisdictionStore(env, tenantId)` (@brandhub/kit-worker/jurisdiction), which always asks for the EU jurisdiction
  * (D19, docs/02 §4). Any other read of the `STORE` binding is reported: `env.STORE.idFromName(…)`,
  * `env.STORE.getByName(…)`, `env["STORE"]`, `const { STORE } = env`, `({ STORE }) => …`.
+ * The Workers' loopback bindings reach the same Durable Object class without the jurisdiction, so they are reported
+ * too: `import { exports } from "cloudflare:workers"`, `exports.CafeStore`, `ctx.exports.RestoStore`,
+ * `this.ctx.exports…`, `const { exports } = ctx`, `const { CafeStore } = ctx.exports`. Only `….exports.default` (the
+ * Worker's own entry point, not a store) is allowed.
  * eslint.config.js applies it to the Workers' source and exempts the helper itself.
  */
 
@@ -24,17 +28,43 @@ export const storeThroughJurisdiction = {
     messages: {
       direct:
         "Reach a client's store with jurisdictionStore(env, tenantId) from @brandhub/kit-worker/jurisdiction, never through the STORE binding directly (D19: EU jurisdiction).",
+      loopback:
+        "Reach a client's store with jurisdictionStore(env, tenantId) from @brandhub/kit-worker/jurisdiction, never through the Worker's loopback exports (ctx.exports, exports from cloudflare:workers), which skip the EU jurisdiction (D19).",
     },
   },
   create(context) {
     return {
+      /** @param {any} node */
+      ImportDeclaration(node) {
+        if (node.source.value !== "cloudflare:workers") return;
+        for (const spec of node.specifiers) {
+          if (spec.type === "ImportSpecifier" && keyName(spec.imported, false) === "exports")
+            context.report({ node: spec, messageId: "loopback" });
+        }
+      },
+      /** @param {any} node */
       MemberExpression(node) {
-        if (keyName(node.property, node.computed) === "STORE") context.report({ node, messageId: "direct" });
+        const key = keyName(node.property, node.computed);
+        if (key === "STORE") context.report({ node, messageId: "direct" });
+        // `ctx.exports`, `this.ctx.exports`, `cf.exports`: allowed only as `….exports.default`
+        if (key === "exports") {
+          const parent = node.parent;
+          const toDefault =
+            parent.type === "MemberExpression" &&
+            parent.object === node &&
+            keyName(parent.property, parent.computed) === "default";
+          if (!toDefault) context.report({ node, messageId: "loopback" });
+        }
+        // `exports.CafeStore` with `exports` imported from cloudflare:workers
+        if (node.object.type === "Identifier" && node.object.name === "exports" && key !== "default")
+          context.report({ node, messageId: "loopback" });
       },
       /** @param {any} node */
       Property(node) {
-        if (node.parent.type === "ObjectPattern" && keyName(node.key, node.computed) === "STORE")
-          context.report({ node, messageId: "direct" });
+        if (node.parent.type !== "ObjectPattern") return;
+        const key = keyName(node.key, node.computed);
+        if (key === "STORE") context.report({ node, messageId: "direct" });
+        if (key === "exports") context.report({ node, messageId: "loopback" });
       },
     };
   },

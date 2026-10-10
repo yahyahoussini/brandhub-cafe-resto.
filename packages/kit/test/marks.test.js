@@ -129,6 +129,15 @@ test("catalog, staff and day payloads keep money whole and flags boolean", () =>
   bad(mark("day.closed", TNT, { businessDate: "2026-02-31" }, 1));
 });
 
+test("a device's receipt prefix is C or S and 1 to 3 digits, or none (docs/03 §7)", () => {
+  const dev = newId("dev");
+  for (const prefix of ["ABCD", "C1000", "TC1", "c1", "C", 1])
+    assert.throws(() => validateMark(mark("device.set", dev, { name: "Caisse", kind: "till", prefix }, 1)), (/** @type {any} */ e) => e.code === "E_BAD_DATA", String(prefix));
+  for (const prefix of ["C1", "S12", "C999"]) assert.ok(validateMark(mark("device.set", dev, { name: "Caisse", kind: "till", prefix }, 1)));
+  assert.ok(validateMark(mark("device.set", dev, { name: "Écran bar", kind: "screen", station: "bar" }, 1)), "a screen has no prefix");
+  assert.ok(validateMark(mark("device.set", dev, { name: "Station", kind: "station", prefix: null }, 1)));
+});
+
 test("every catalog mark reaches its projection", () => {
   const mod = newId("mod");
   const prd = newId("prd");

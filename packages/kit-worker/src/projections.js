@@ -114,8 +114,8 @@ const PLAIN_MARKS = Object.freeze(
 /** Settings that change how the day's numbers are computed: a new value makes every day dirty. */
 const REPORT_SETTINGS = new Set(["hours.businessDayCutoff", "reports.thresholds"]);
 
-/** "C1-000123", "TC1-000004" (training series). */
-const RECEIPT_NO = /^(T?[A-Z][A-Z0-9]{0,3})-(\d{1,9})$/;
+/** "C1-000123", "TC1-000004" (training series): the series (what `newSeries` accepts) and the number. */
+export const RECEIPT_NO = /^(T?[A-Z][A-Z0-9]{0,3})-(\d{1,9})$/;
 
 /** @param {string} type */
 const isOrderType = (type) => ORDER_EVENT_TYPES.includes(type);
@@ -831,13 +831,13 @@ export class Projections {
       ).map((r) => r.order_id),
     ]);
     const rows = this.#all(
-      `SELECT * FROM events WHERE entity IN (SELECT value FROM json_each(?1))
+      `SELECT * FROM events WHERE entity IN (SELECT value FROM json_each(?))
        UNION
        SELECT e.* FROM events e JOIN machine_readings r ON r.event_id = e.id
-         WHERE (r.type = 'machine.reading' AND r.business_date = ?2) OR (r.type = 'machine.off_till' AND r.business_at >= ?3 AND r.business_at < ?4)
+         WHERE (r.type = 'machine.reading' AND r.business_date = ?) OR (r.type = 'machine.off_till' AND r.business_at >= ? AND r.business_at < ?)
        UNION
        SELECT * FROM events WHERE type = 'kredi.repaid' AND json_extract(data, '$.tender') = 'cash'
-         AND json_extract(data, '$.bankId') IN (SELECT value FROM json_each(?5))
+         AND json_extract(data, '$.bankId') IN (SELECT value FROM json_each(?))
        ORDER BY pos`,
       JSON.stringify([...entities]),
       date,

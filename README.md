@@ -21,7 +21,7 @@ products. The plan behind this pack, with the market scan and the five-expert br
 | `docs/research/` | the market scan, the verified facts and a digest of the 4–5 Sep plan, with sources | read |
 
 ## Before you start
-1. Install **Node 22.12 or newer**, **Git** and **Claude Code**. On the Windows PC that will build the Station, also Git and Node.
+1. Install **Node 22.13 or newer**, **Git** and **Claude Code**. On the Windows PC that will build the Station, also Git and Node.
 2. Unzip this folder, open a terminal inside it, run `npm test` (the kit's 75 tests must pass), then `claude`.
 3. Create a private GitHub repository `brandhub-cafe-resto` (prompt 01 connects it).
 4. The brandhub.ma pack should be running first: its coming-soon Worker holds `cafe.brandhub.ma` and `resto.brandhub.ma`

@@ -18,7 +18,7 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
 | 01 | Repository scaffold | done | 4 Oct 2026 | Node v22.22.0, npm 10.9.4, TypeScript 5.9.3, ESLint 9.39.5, Prettier 3.9.9, Playwright 1.56.1. `npm ci && npm run gate` passes, 94 tests (kit 75 + `bh/logical-css` 19). Details below. |
 | 02 | Design system, fonts, UI parts, i18n | done | 9 Oct 2026 | `npm run gate` passes, 109 tests. `npm run contrast`: 52/52 used pairs pass. 21 Playwright runs pass (16 style guide, 5 behaviour), no external host. UI kit 10.4 KB gzip (21.7 KB with Preact, signals, Lucide), CSS 5.0 KB, fonts 208 KB. Review fixes in a second commit. Details below. |
 | 03 | Business rules: events, marks, stock, reports, permissions | done | 9 Oct 2026 | `npm run gate` passes, 172 tests (kit 138). The café acceptance day of docs/01 §6 gives every number of the spec. Four bugs of the provided kit fixed after a failing test (prompt 00 findings 1, 2, 8, 9). Review fixes in a second commit. Details below. |
-| 04 | Cloud store: one SQLite database per client | built; staging not run | 10 Oct 2026 | `npm run gate` passes: 229 node tests (kit 144, kit-worker 30), 64 Worker tests in workerd. The café acceptance day pushed to a store gives the kit's report. Append of 200 events: median 71 ms (local workerd). compatibility_date 2026-10-06. Staging (step 5, checks 2–3) not run: no Cloudflare account access here. Details below. |
+| 04 | Cloud store: one SQLite database per client | built; staging not run | 10 Oct 2026 | `npm run gate` passes: 253 node tests, 64 Worker tests in workerd (after verification round 1). The café acceptance day pushed to a store gives the kit's report. Append of 200 events: median 71 ms (local workerd). compatibility_date 2026-10-06. Staging (step 5, checks 2–3) not run: no Cloudflare account access here. Details below. |
 
 ## Current state
 - Kit (`packages/kit/src`), 138 unit tests:
@@ -92,6 +92,19 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
   - Dependencies (dev only, 0 KB on the till route): `wrangler` 4.149.0, `vitest` 5.0.3, `@cloudflare/vitest-plugin`
     1.4.0, `@cloudflare/workers-types`. npm 10.9 crashes resolving vitest 4.1 (`edgesOut`); vitest 5 installs cleanly.
   - R2 free tier confirmed: 10 GB-month per month, Standard storage only (Cloudflare's R2 pricing source).
+  - Verification round 1 (4 reviewers, a skeptic each, 13 findings confirmed and fixed with a test each):
+    - a move between a real and a TEST order, or into an order not opened yet, was accepted (now `E_MOVE_PAIR`);
+      the moved snapshot must also keep the line's name, category and station;
+    - a receipt number was accepted from the device's real or training series whatever the order's TEST flag, and
+      from a device without a prefix; now the order's own series only (`E_BAD_DATA`);
+    - an id repeated inside one batch was decided twice; a refused id is now skipped when repeated;
+    - the lint rule missed the platform's loopback `exports` path to the store class;
+    - the top level of `wrangler.jsonc` (local) carried the production Worker name: it is now `brandhub-<p>-local`,
+      not on workers.dev, so a deploy without `--env` can never replace production;
+    - `node:sqlite` needs Node 22.13 (22.12 had it behind a flag; numbered `?N` placeholders needed 22.20, now plain
+      `?`): `engines` is `>=22.13`, README and prompt 00 say so;
+    - docs: `E_UNKNOWN_DEVICE` covers a transfer to a device that is not a till or phone; `customers` holds ids only;
+      the clock-skew test now proves the business day of a skewed sale.
 - Apps: no screen yet. Workspaces (prompt 01): `@brandhub/kit-web`, `@brandhub/kit-worker`, `@brandhub/cafe-worker`,
   `@brandhub/cafe-web`, `@brandhub/resto-worker`, `@brandhub/resto-web`, `@brandhub/station`, `@brandhub/tools`. The
   two web apps serve only the dev style guide (prompt 02); the Workers and the Station have no source yet.
@@ -123,7 +136,8 @@ Claude Code updates this file at the end of every prompt (CLAUDE.md, "Each promp
     - kit `src/` only sees globals common to Node and browsers.
   - Three rule options keep the provided kit lint-clean without editing it: `no-irregular-whitespace` skips regular
     expressions, `no-unused-vars` ignores rest siblings, and console is allowed in tests.
-  - ESLint 9 instead of 10: ESLint 10 needs Node ≥ 22.13 and `engines` allows 22.12.
+  - ESLint 9 instead of 10: chosen when `engines` allowed Node 22.12 (ESLint 10 needs 22.13). Prompt 04 raised the floor to
+    22.13 (`node:sqlite` unflagged), so ESLint 10 is now possible; not changed yet.
   - Prettier (width 120) formats the new code only; it ignores `*.md`, `docs/`, `prompts/`, `data/` and `packages/kit/`,
     so the pack keeps its layout. `npm run format` and `npm run format:check` are available; they are not part of the gate.
   - `npm test` = `node --test` over `*.test.{js,mjs,cjs}` in `packages/*/test`, `apps/*/*/test`, `apps/station/test`

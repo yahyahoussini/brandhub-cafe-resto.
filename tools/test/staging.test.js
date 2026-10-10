@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { unstable_readConfig } from "wrangler";
 import { PRODUCTS, SECRETS, readStagingConfig, stagingPlan } from "../scripts/staging.mjs";
 
 const SCRIPT = fileURLToPath(new URL("../scripts/staging.mjs", import.meta.url));
@@ -74,5 +75,25 @@ describe("tools/scripts/staging.mjs", () => {
     assert.ok(!run.stdout.includes(sentinel) && !run.stderr.includes(sentinel));
     const bad = spawnSync(process.execPath, [SCRIPT, "staging"], { encoding: "utf8" });
     assert.equal(bad.status, 2);
+  });
+});
+
+describe("apps/<product>/worker/wrangler.jsonc", () => {
+  it("keeps its top level local: a deploy without --env reaches neither the production name nor a real registry", () => {
+    for (const p of PRODUCTS) {
+      const config = fileURLToPath(new URL(`../../apps/${p}/worker/wrangler.jsonc`, import.meta.url));
+      /** @type {{ name?: string, workers_dev?: boolean, vars: Record<string, unknown>, d1_databases: { binding: string, database_id?: string }[] }} */
+      const top = unstable_readConfig({ config });
+      const production = unstable_readConfig({ config, env: "production" });
+      const staging = unstable_readConfig({ config, env: "staging" });
+      assert.equal(production.name, `brandhub-${p}`, p);
+      assert.equal(staging.name, `brandhub-${p}-staging`, p);
+      assert.equal(top.name, `brandhub-${p}-local`, p);
+      assert.equal(top.workers_dev, false, p);
+      assert.equal(top.vars.ENVIRONMENT, "local", p);
+      // a database_id that names no Cloudflare database: Wrangler neither binds the staging registry by its name nor
+      // creates one outside the EU jurisdiction (docs/12 §2)
+      assert.equal(top.d1_databases.find((d) => d.binding === "REGISTRY")?.database_id, "local-only", p);
+    }
   });
 });

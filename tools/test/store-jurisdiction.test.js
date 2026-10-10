@@ -10,6 +10,7 @@ RuleTester.itOnly = it.only;
 
 const tester = new RuleTester({ languageOptions: { ecmaVersion: 2025, sourceType: "module" } });
 const direct = [{ messageId: "direct" }];
+const loopback = [{ messageId: "loopback" }];
 
 tester.run("bh/store-through-jurisdiction", storeThroughJurisdiction, {
   valid: [
@@ -19,6 +20,8 @@ tester.run("bh/store-through-jurisdiction", storeThroughJurisdiction, {
     { code: "env.REGISTRY.prepare(q); env.FILES.get(k); env.ASSETS.fetch(r);" },
     { code: "const { REGISTRY, FILES } = env;" },
     { code: 'const STORE_NAME = "x"; env.STORES; env.store;' },
+    { code: "export default { fetch(request, env, ctx) { return ctx.exports.default.fetch(request); } };" },
+    { code: 'import { DurableObject, WorkerEntrypoint } from "cloudflare:workers"; const exportsCount = 1;' },
   ],
   invalid: [
     { code: "env.STORE.idFromName(tenantId);", errors: direct },
@@ -35,6 +38,22 @@ tester.run("bh/store-through-jurisdiction", storeThroughJurisdiction, {
       code: "export default { fetch(request, { STORE }) { return STORE.get(STORE.idFromName('x')); } };",
       errors: direct,
     },
+    // the Workers' loopback bindings reach the same Durable Object class without the jurisdiction
+    { code: 'import { exports } from "cloudflare:workers";', errors: loopback },
+    { code: 'import { exports as ex } from "cloudflare:workers";', errors: loopback },
+    {
+      code: 'import { exports } from "cloudflare:workers"; exports.CafeStore.get(exports.CafeStore.idFromName(t));',
+      errors: [...loopback, ...loopback, ...loopback],
+    },
+    { code: "exports.CafeStore.idFromName(t);", errors: loopback },
+    { code: 'exports["RestoStore"].getByName(t);', errors: loopback },
+    { code: "ctx.exports.RestoStore.getByName(t);", errors: loopback },
+    { code: "this.ctx.exports.CafeStore.get(id);", errors: loopback },
+    { code: 'ctx["exports"].CafeStore.get(id);', errors: loopback },
+    { code: 'import * as cf from "cloudflare:workers"; cf.exports.CafeStore.getByName(t);', errors: loopback },
+    { code: "const { CafeStore } = ctx.exports;", errors: loopback },
+    { code: "const loop = ctx.exports; loop.CafeStore.getByName(t);", errors: loopback },
+    { code: "const { exports } = ctx;", errors: loopback },
   ],
 });
 
@@ -54,6 +73,17 @@ describe("eslint.config.js", () => {
     ])
       assert.deepEqual(await ruleIdsFor(file), ["bh/store-through-jurisdiction"], file);
     assert.deepEqual(await ruleIdsFor("packages/kit-worker/src/jurisdiction.js"), []);
+  });
+
+  it("reports the loopback exports in the Workers' source", async () => {
+    const [result] = await eslint.lintText(
+      'import { exports } from "cloudflare:workers";\nexport const s = (ctx, t) => [exports.CafeStore.getByName(t), ctx.exports.CafeStore.getByName(t)];\n',
+      { filePath: "apps/cafe/worker/src/x.js" },
+    );
+    assert.deepEqual(
+      result.messages.map((m) => m.ruleId),
+      Array(3).fill("bh/store-through-jurisdiction"),
+    );
   });
 
   it("leaves the specs free to reach the binding (they test the helper against it)", async () => {

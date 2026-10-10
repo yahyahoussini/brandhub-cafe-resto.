@@ -122,29 +122,42 @@ function move() {
   const src = script("ord_t2");
   src.add("order.opened", { mode: "table", tableId: "tbl_2" });
   src.add("line.added", line("lin_a"));
-  src.add("line.added", line("lin_b", { modifiers: [{ id: "mod_lait", name: { fr: "Lait", ar: "حليب" }, priceCentimes: 200 }] }));
+  src.add("line.added", line("lin_b", { category: "cat_boissons", station: "bar", modifiers: [{ id: "mod_lait", name: { fr: "Lait", ar: "حليب" }, priceCentimes: 200 }] }));
   src.add("lines.sent", { lineIds: ["lin_a", "lin_b"] });
   const source = foldOrder(src.events);
+  const dst = script("ord_t4");
+  dst.add("order.opened", { mode: "table", tableId: "tbl_4" });
+  dst.add("line.added", line("lin_c"));
+  const target = foldOrder(dst.events);
   const snaps = source.lines.map(({ movedTo, movedFrom, voided, voidReason, totalCentimes, ...rest }) => rest);
   const out = { id: uuidv7(T0 + 60_000), type: "lines.moved_out", entity: "ord_t2", seq: 5, device: TILL, staff: "stf_ali", at: T0 + 60_000, data: { moveId: "mv_1", toOrderId: "ord_t4", lineIds: ["lin_a", "lin_b"] } };
   const inn = { id: uuidv7(T0 + 60_001), type: "lines.moved_in", entity: "ord_t4", seq: 3, device: TILL, staff: "stf_ali", at: T0 + 60_001, data: { moveId: "mv_1", fromOrderId: "ord_t2", lines: snaps } };
-  return { source, out, inn, snaps };
+  return { source, target, out, inn, snaps };
 }
 
 test("assertMovePair: a move is two events that name each other and carry the same lines", () => {
-  const { source, out, inn, snaps } = move();
-  assertMovePair(out, inn, source);
-  throwsCode(() => assertMovePair(inn, out, source), "E_MOVE_PAIR");
-  throwsCode(() => assertMovePair(out, { ...inn, data: { ...inn.data, moveId: "mv_2" } }, source), "E_MOVE_PAIR");
-  throwsCode(() => assertMovePair(out, { ...inn, device: "dev_phone" }, source), "E_MOVE_PAIR");
-  throwsCode(() => assertMovePair(out, { ...inn, entity: "ord_t9" }, source), "E_MOVE_PAIR");
-  throwsCode(() => assertMovePair(out, { ...inn, data: { ...inn.data, fromOrderId: "ord_t9" } }, source), "E_MOVE_PAIR");
-  throwsCode(() => assertMovePair(out, { ...inn, data: { ...inn.data, lines: snaps.slice(0, 1) } }, source), "E_MOVE_PAIR");
-  throwsCode(() => assertMovePair({ ...out, data: { ...out.data, lineIds: ["lin_a", "lin_z"] } }, inn, source), "E_MOVE_PAIR");
+  const { source, target, out, inn, snaps } = move();
+  assertMovePair(out, inn, source, target);
+  throwsCode(() => assertMovePair(inn, out, source, target), "E_MOVE_PAIR");
+  throwsCode(() => assertMovePair(out, { ...inn, data: { ...inn.data, moveId: "mv_2" } }, source, target), "E_MOVE_PAIR");
+  throwsCode(() => assertMovePair(out, { ...inn, device: "dev_phone" }, source, target), "E_MOVE_PAIR");
+  throwsCode(() => assertMovePair(out, { ...inn, entity: "ord_t9" }, source, target), "E_MOVE_PAIR");
+  throwsCode(() => assertMovePair(out, { ...inn, data: { ...inn.data, fromOrderId: "ord_t9" } }, source, target), "E_MOVE_PAIR");
+  throwsCode(() => assertMovePair(out, { ...inn, data: { ...inn.data, lines: snaps.slice(0, 1) } }, source, target), "E_MOVE_PAIR");
+  throwsCode(() => assertMovePair({ ...out, data: { ...out.data, lineIds: ["lin_a", "lin_z"] } }, inn, source, target), "E_MOVE_PAIR");
 });
 
-test("assertMovePair: a line never changes on its way (price, quantity, options, rate, doses, sent state)", () => {
-  const { source, out, inn, snaps } = move();
+test("assertMovePair: the target is opened before the move, and TEST and real orders never exchange lines", () => {
+  const { source, target, out, inn } = move();
+  throwsCode(() => assertMovePair(out, inn, source, null), "E_MOVE_PAIR");
+  throwsCode(() => assertMovePair(out, inn, source, { ...target, id: "ord_t9" }), "E_MOVE_PAIR");
+  throwsCode(() => assertMovePair(out, inn, source, { ...target, training: true }), "E_MOVE_PAIR");
+  throwsCode(() => assertMovePair(out, inn, { ...source, training: true }, target), "E_MOVE_PAIR");
+  assertMovePair(out, inn, { ...source, training: true }, { ...target, training: true });
+});
+
+test("assertMovePair: a line never changes on its way (price, quantity, options, rate, doses, sent state, tax class, kitchen)", () => {
+  const { source, target, out, inn, snaps } = move();
   const changes = [
     { unitCentimes: 1 },
     { qtyMilli: 2000 },
@@ -155,10 +168,14 @@ test("assertMovePair: a line never changes on its way (price, quantity, options,
     { held: true },
     { modifiers: [] },
     { modifiers: [{ id: "mod_lait", name: { fr: "Lait", ar: "حليب" }, priceCentimes: 0 }] },
+    { category: "cat_cuisine" },
+    { category: null },
+    { station: "cuisine" },
+    { name: { fr: "Msemen", ar: "مسمن" } },
   ];
   for (const change of changes) {
     const lines = snaps.map((l) => (l.lineId === "lin_b" ? { ...l, ...change } : l));
-    throwsCode(() => assertMovePair(out, { ...inn, data: { ...inn.data, lines } }, source), "E_MOVE_PAIR");
+    throwsCode(() => assertMovePair(out, { ...inn, data: { ...inn.data, lines } }, source, target), "E_MOVE_PAIR");
   }
 });
 

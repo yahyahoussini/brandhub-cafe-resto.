@@ -1,7 +1,8 @@
 // @ts-check
 /**
  * node:test helper: the surface of a Durable Object's storage that the store uses (`sql.exec(...).toArray()` and
- * `transactionSync`), served by `node:sqlite` (Node 22.5+, unflagged in 22.13+), so the store's own code runs here.
+ * `transactionSync`), served by `node:sqlite` (unflagged from Node 22.13, the floor of `engines`), so the store's own
+ * code runs here. The store binds plain `?` placeholders only: node:sqlite before 22.20 does not bind numbered ones.
  *
  * - `exec` with no bindings and no result (DDL, several statements) goes to `db.exec`, like a Durable Object running a
  *   multi-statement query; anything else is one prepared statement.

@@ -5,7 +5,8 @@
  * on `node:sqlite`, and the store keeps the async hashing and the one transaction (tenant-store.js).
  *
  * A pushed batch is handled one event at a time, in the device's order:
- * 1. duplicates (an id already stored, or twice in the batch) are acknowledged, never stored twice;
+ * 1. duplicates (an id already stored, or twice in the batch) are acknowledged, never stored twice; a later copy of an
+ *    id refused earlier in the batch is not decided again (the id is rejected once), and a move counts each id once;
  * 2. the envelope (`validateEnvelope`);
  * 3. a sequenced aggregate whose earlier event was refused in this batch refuses the rest (E_SEQ_BLOCKED);
  * 4. the device and the staff belong to the client: a paired device of the directory (`device.set`, E_UNKNOWN_DEVICE)
@@ -19,7 +20,8 @@
  *    a move is a `lines.moved_out` and a `lines.moved_in` of the same batch, kept or refused together
  *    (`assertMovePair`, E_MOVE_PAIR); a credit note never refunds more than what is left of its ticket
  *    (`assertRefundWithin`, E_REFUND_EXCEEDS); a receipt number and a payment id are used once (E_DUP_RECEIPT,
- *    E_DUP_PAYMENT); a till closes orders only in its own series.
+ *    E_DUP_PAYMENT); a till or a phone closes orders only in its own series (`T` + prefix for a TEST order) and only
+ *    when it has a prefix (E_BAD_DATA).
  * Accepted events carry `recvAt`, `relayedBy` and `clockSkew` (docs/04 §6); the store then gives them `pos` and hashes.
  */
 import { BANK_EVENT_TYPES, assertBankAccepts } from "@brandhub/kit/bank";
@@ -37,7 +39,7 @@ import {
 import { isEntityId } from "@brandhub/kit/ids";
 import { validateMark } from "@brandhub/kit/marks";
 import { ORDER_EVENT_TYPES, OrderRuleError, assertMovePair, assertRefundWithin } from "@brandhub/kit/order";
-import { reduce } from "./projections.js";
+import { RECEIPT_NO, reduce } from "./projections.js";
 
 /** @typedef {import("@brandhub/kit/events").EventEnvelope} EventEnvelope */
 /** @typedef {import("@brandhub/kit/events").DeviceKind} DeviceKind */
@@ -324,7 +326,11 @@ function decideOnce(items, caller, { reader, recvAt, tenantId = null }, forced) 
   const blocked = new Set();
   /** @type {Map<string, { outs: Record<string, any>[], ins: Record<string, any>[] }>} the batch's moves by moveId */
   const moves = new Map();
+  /** @type {Set<string>} ids met while listing the moves: a repeated or stored id is a duplicate, not a second event */
+  const listed = new Set();
   for (const it of items) {
+    if (it.id !== null && (listed.has(it.id) || reader.hasEvent(it.id))) continue;
+    if (it.id !== null) listed.add(it.id);
     const v = it.value;
     if (!v || (v.type !== "lines.moved_out" && v.type !== "lines.moved_in") || typeof v.data?.moveId !== "string")
       continue;
@@ -341,6 +347,8 @@ function decideOnce(items, caller, { reader, recvAt, tenantId = null }, forced) 
       seen.add(it.id);
       continue;
     }
+    // A later copy of an id refused earlier in this batch is settled by that refusal: never decided (or stored) again.
+    if (it.id !== null && refusedIds.has(it.id)) continue;
     try {
       if (it.error) throw it.error;
       const ev = rule(() => validateEnvelope(it.value));
@@ -487,10 +495,13 @@ function sequenced(ev, w, batch) {
       const holder = w.receiptOwner(no);
       if (holder !== null && holder !== ev.entity)
         throw new OrderRuleError("E_DUP_RECEIPT", `receipt ${no} was already used`);
+      // docs/03 §7: every device that closes orders has a prefix; a TEST order takes the training series T + prefix.
       const prefix = w.device(ev.device)?.prefix;
-      if (prefix && !no.startsWith(`${prefix}-`) && !no.startsWith(`T${prefix}-`)) {
-        throw new OrderRuleError("E_BAD_DATA", `receipt ${no} is not in the series ${prefix} of ${ev.device}`);
-      }
+      if (!prefix) throw new OrderRuleError("E_BAD_DATA", `${ev.device} has no receipt series`);
+      const series = next.training ? `T${prefix}` : prefix;
+      const m = RECEIPT_NO.exec(no);
+      if (!m || m[1] !== series)
+        throw new OrderRuleError("E_BAD_DATA", `receipt ${no} is not in the series ${series} of ${ev.device}`);
       break;
     }
     case "order.transferred": {
@@ -510,7 +521,10 @@ function sequenced(ev, w, batch) {
       const inn = g.ins[0];
       if (batch.refusedIds.has(inn.id))
         throw new OrderRuleError("E_MOVE_PAIR", "the lines.moved_in of this move was refused");
-      rule(() => assertMovePair(/** @type {any} */ (ev), /** @type {any} */ (inn), /** @type {OrderState} */ (prev)));
+      const target = w.order(d.toOrderId);
+      rule(() =>
+        assertMovePair(/** @type {any} */ (ev), /** @type {any} */ (inn), /** @type {OrderState} */ (prev), target),
+      );
       batch.movedOut.set(d.moveId, ev);
       break;
     }

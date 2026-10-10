@@ -6,8 +6,11 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
 import { buildDay } from "@brandhub/kit/reports";
+import { CLOUD_DEVICE } from "@brandhub/kit/events";
 import { newId } from "@brandhub/kit/ids";
+import { businessDate } from "@brandhub/kit/timezone";
 import { Store } from "../src/store.js";
 import { BatchError, MAX_BATCH_EVENTS } from "../src/sync-rules.js";
 import { PROJECTION_TABLES } from "../src/projections.js";
@@ -436,6 +439,9 @@ test("a move is kept whole: both events in one batch, the same lines, or both re
   });
   const r1 = await store.append([...repriced, covers], v.callers.phone);
   assert.deepEqual(codes(r1), ["E_MOVE_PAIR", "E_MOVE_PAIR", "E_SEQ_BLOCKED"]);
+  // a lines.moved_in that changes a line's category (its tax class, docs/11 §6) or its kitchen: both refused
+  const relabeled = [out(), inn(snaps.map((l, i) => (i === 0 ? { ...l, category: v.ids.food, station: "cuisine" } : l)))];
+  assert.deepEqual(codes(await store.append(relabeled, v.callers.phone)), ["E_MOVE_PAIR", "E_MOVE_PAIR"]);
   // the valid move
   const pair = [out(), inn()];
   const ok = await store.append(pair, v.callers.phone);
@@ -467,6 +473,118 @@ test("a lines.moved_out kept on the first pass is refused when its lines.moved_i
       [pair[1].id, "E_STATUS"],
     ],
   );
+});
+
+test("lines never move between a TEST order and a real one (E_MOVE_PAIR)", async () => {
+  const { v, store } = await ready();
+  const real = v.sale({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    mode: "table",
+    tableId: newId("tbl"),
+    lines: [
+      ["noir", 2],
+      ["creme", 1],
+    ],
+    send: true,
+  });
+  const training = v.sale({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    mode: "table",
+    tableId: newId("tbl"),
+    training: true,
+    lines: [["the", 1]],
+    send: true,
+  });
+  assert.deepEqual((await store.append([...real.events, ...training.events], v.callers.phone)).rejected, []);
+  /** @param {{ id: string }} from @param {{ id: string }} to */
+  const move = (from, to) => {
+    const source = /** @type {import("@brandhub/kit/order").OrderState} */ (store.projections.order(from.id));
+    const target = /** @type {import("@brandhub/kit/order").OrderState} */ (store.projections.order(to.id));
+    const snaps = source.lines.map(({ movedTo, movedFrom, voided, voidReason, totalCentimes, ...rest }) => rest);
+    const moveId = newId("lin");
+    return [
+      v.ev({
+        device: v.ids.phone,
+        staff: v.ids.ali,
+        type: "lines.moved_out",
+        entity: from.id,
+        seq: source.seq + 1,
+        data: { moveId, toOrderId: to.id, lineIds: source.lines.map((l) => l.lineId) },
+      }),
+      v.ev({
+        device: v.ids.phone,
+        staff: v.ids.ali,
+        type: "lines.moved_in",
+        entity: to.id,
+        seq: target.seq + 1,
+        data: { moveId, fromOrderId: from.id, lines: snaps },
+      }),
+    ];
+  };
+  // sent real lines into a TEST order would leave every report with no void after sending (D13)
+  assert.deepEqual(codes(await store.append(move(real, training), v.callers.phone)), ["E_MOVE_PAIR", "E_MOVE_PAIR"]);
+  assert.deepEqual(codes(await store.append(move(training, real), v.callers.phone)), ["E_MOVE_PAIR", "E_MOVE_PAIR"]);
+  const kept = /** @type {import("@brandhub/kit/order").OrderState} */ (store.projections.order(real.id));
+  assert.equal(kept.totals.totalCentimes, 2 * 1000 + 1200);
+  assert.ok(kept.lines.every((l) => l.movedTo === null));
+});
+
+test("an id twice in a batch is decided once: a later copy of a refused event is not stored", async () => {
+  const { v, store, all } = await ready();
+  const cat = newId("cat");
+  const refused = v.office("catalog.category_set", cat, { name: { fr: "Alcools", ar: "كحول" }, taxClass: "alcohol" });
+  const again = { ...refused, data: { ...refused.data, taxClass: "food" } };
+  const r = await store.append([refused, again], v.callers.office);
+  assert.deepEqual([r.accepted, r.duplicates], [[], []]);
+  assert.deepEqual(
+    r.rejected.map((x) => [x.id, x.code]),
+    [[refused.id, "E_BAD_DATA"]],
+  );
+  assert.deepEqual(all("SELECT COUNT(*) AS n FROM events WHERE id = ?", refused.id), [{ n: 0 }]);
+  // cash refused for a bank not open yet stays refused when the batch repeats it after the opening
+  const aliBank = newId("bnk");
+  const repay = v.ev({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    type: "kredi.repaid",
+    entity: newId("cus"),
+    data: { amountCentimes: 1500, tender: "cash", bankId: aliBank },
+  });
+  const opened = v.ev({
+    device: v.ids.phone,
+    staff: v.ids.ali,
+    type: "bank.opened",
+    entity: aliBank,
+    data: { kind: "waiter", holder: v.ids.ali, floatCentimes: 0 },
+  });
+  const money = await store.append([repay, opened, repay], v.callers.phone);
+  assert.deepEqual(money.accepted, [opened.id]);
+  assert.deepEqual(
+    money.rejected.map((x) => [x.id, x.code]),
+    [[repay.id, "E_BANK_UNKNOWN"]],
+  );
+  assert.deepEqual(all("SELECT expected FROM banks WHERE id = ?", aliBank), [{ expected: 0 }]);
+  const letters = all("SELECT id FROM deadletter WHERE id IN (?, ?) AND resolved_at IS NULL", refused.id, repay.id);
+  assert.equal(letters.length, 2, "one dead letter each, for events that are not in the log");
+  assert.deepEqual(all("SELECT COUNT(*) AS n FROM events WHERE id = ?", repay.id), [{ n: 0 }]);
+});
+
+test("a move whose events are repeated in the batch is kept once; the copies are acknowledged", async () => {
+  for (const repeat of ["out", "in"]) {
+    const s = await ready();
+    const { v, store } = s;
+    const { out, inn } = await tables(s);
+    const [o, i] = [out(), inn()];
+    const batch = repeat === "out" ? [o, o, i] : [o, i, i];
+    const r = await store.append(batch, v.callers.phone);
+    assert.deepEqual(r.rejected, [], repeat);
+    assert.deepEqual(r.accepted, [o.id, i.id], repeat);
+    assert.deepEqual(r.duplicates, [repeat === "out" ? o.id : i.id], repeat);
+    const retry = await store.append([o, i], v.callers.phone);
+    assert.deepEqual([retry.accepted, retry.duplicates, retry.rejected], [[], [o.id, i.id], []], repeat);
+  }
 });
 
 test("a credit note never refunds more than what is left of its ticket", async () => {
@@ -547,6 +665,115 @@ test("a receipt number is used once, in the closing device's own series", async 
     receiptNo: "TC1-000001",
   });
   assert.deepEqual((await store.append(training.events, v.callers.till)).rejected, []);
+  // a TEST order never takes a real number, and a real sale never a training one (docs/03 §5)
+  const testAsReal = v.sale({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    bank: tillBank,
+    training: true,
+    lines: [["noir", 1]],
+    pay: { tender: "card_external", amount: 1000, reference: "1238" },
+    receiptNo: "C1-000002",
+  });
+  assert.deepEqual(codes(await store.append(testAsReal.events, v.callers.till)), ["E_BAD_DATA"]);
+  const realAsTest = v.sale({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    bank: tillBank,
+    lines: [["noir", 1]],
+    pay: { tender: "card_external", amount: 1000, reference: "1239" },
+    receiptNo: "TC1-000002",
+  });
+  assert.deepEqual(codes(await store.append(realAsTest.events, v.callers.till)), ["E_BAD_DATA"]);
+  // a device paired without a prefix closes nothing, so it cannot take another device's numbers (docs/03 §7)
+  const bare = newId("dev");
+  /** @type {import("../src/sync-rules.js").Caller} */
+  const bareCaller = { device: bare, kind: "phone" };
+  const bareBank = newId("bnk");
+  assert.deepEqual(
+    (await store.append([v.office("device.set", bare, { name: "Serveur 2", kind: "phone" })], v.callers.office))
+      .rejected,
+    [],
+  );
+  const opened = v.ev({
+    device: bare,
+    staff: v.ids.ali,
+    type: "bank.opened",
+    entity: bareBank,
+    data: { kind: "waiter", holder: v.ids.ali, floatCentimes: 0 },
+  });
+  assert.deepEqual((await store.append([opened], bareCaller)).rejected, []);
+  const borrowed = v.sale({
+    device: bare,
+    staff: v.ids.ali,
+    bank: bareBank,
+    lines: [["noir", 1]],
+    pay: { tender: "cash", amount: 1000 },
+    receiptNo: "C1-000002",
+  });
+  assert.deepEqual(codes(await store.append(borrowed.events, bareCaller)), ["E_BAD_DATA"]);
+  // the till's own next numbers are still free, in both of its series
+  const next = v.sale({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    bank: tillBank,
+    lines: [["noir", 1]],
+    pay: { tender: "card_external", amount: 1000, reference: "1240" },
+    receiptNo: "C1-000002",
+  });
+  const nextTraining = v.sale({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    bank: tillBank,
+    training: true,
+    lines: [["noir", 1]],
+    pay: { tender: "card_external", amount: 1000, reference: "1241" },
+    receiptNo: "TC1-000002",
+  });
+  assert.deepEqual((await store.append([...next.events, ...nextTraining.events], v.callers.till)).rejected, []);
+  assert.deepEqual(store.dailyReport(v.businessDay).tickets.count, 2, "only the two real sales count");
+});
+
+test("a three-digit prefix and its training series are kept like any other (newSeries agrees with the blocks)", async () => {
+  const { v, store, all, tillBank } = await ready();
+  const renamed = v.office("device.set", v.ids.till, { name: "Caisse 1", kind: "till", prefix: "C999" });
+  assert.deepEqual((await store.append([renamed], v.callers.office)).rejected, []);
+  // the cloud reserves the till's training block before its first TEST sale
+  const block = v.ev({
+    device: CLOUD_DEVICE,
+    staff: null,
+    type: "receipts.block_reserved",
+    entity: newId("blk"),
+    data: { deviceId: v.ids.till, prefix: "TC999", start: 1, end: 500 },
+  });
+  assert.deepEqual((await store.append([block], v.callers.cloud)).rejected, []);
+  const real = v.sale({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    bank: tillBank,
+    lines: [["noir", 1]],
+    pay: { tender: "cash", amount: 1000 },
+    receiptNo: "C999-000001",
+  });
+  const training = v.sale({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    bank: tillBank,
+    training: true,
+    lines: [["noir", 1]],
+    pay: { tender: "cash", amount: 1000 },
+    receiptNo: "TC999-000001",
+  });
+  const r = await store.append([...real.events, ...training.events], v.callers.till);
+  assert.deepEqual(r.rejected, []);
+  assert.equal(r.accepted.length, real.events.length + training.events.length);
+  assert.deepEqual(all("SELECT prefix, last_end, last_used FROM receipt_series ORDER BY prefix"), [
+    { prefix: "C999", last_end: 0, last_used: 1 },
+    { prefix: "TC999", last_end: 500, last_used: 1 },
+  ]);
+  // a prefix outside docs/03 §7 is refused at pairing
+  const odd = v.office("device.set", v.ids.phone, { name: "Serveur 1", kind: "phone", prefix: "ABCD" });
+  assert.deepEqual(codes(await store.append([odd], v.callers.office)), ["E_BAD_DATA"]);
 });
 
 test("a revoked device keeps what it wrote before its revocation; later events are refused", async () => {
@@ -584,7 +811,7 @@ test("a revoked device keeps what it wrote before its revocation; later events a
 });
 
 test("clock skew is flagged (docs/04 §6) and the day counts it at the server's time", async () => {
-  const { v, store, all } = await ready();
+  const { v, store, all, tillBank } = await ready();
   const fine = v.ev({
     device: v.ids.till,
     staff: v.ids.sara,
@@ -618,6 +845,33 @@ test("clock skew is flagged (docs/04 §6) and the day counts it at the server's 
     [fine.id]: 0,
   });
   assert.ok(flags.every((f) => f.recv_at === r.serverTime));
+  // a till whose clock is two days ahead sells into the bank it opened on an earlier day: the sale counts on the
+  // server's business day, not on the day its wrong clock shows
+  const ahead2 = v.sale({
+    device: v.ids.till,
+    staff: v.ids.sara,
+    bank: tillBank,
+    when: Date.now() + 2 * 86_400_000,
+    lines: [["noir", 1]],
+    pay: { tender: "cash", amount: 1000 },
+    receiptNo: "C1-000001",
+  });
+  const sold = await store.append(ahead2.events, v.callers.till);
+  assert.deepEqual(sold.rejected, []);
+  const serverDay = businessDate(sold.serverTime, { cutoff: "05:00" });
+  assert.notEqual(serverDay, v.businessDay, "the bank was opened on an earlier day");
+  assert.deepEqual(all("SELECT business_at, business_date FROM orders WHERE id = ?", ahead2.id), [
+    { business_at: sold.serverTime, business_date: serverDay },
+  ]);
+  assert.ok(
+    all("SELECT clock_skew, recv_at FROM events WHERE entity = ?", ahead2.id).every(
+      (e) => e.clock_skew === 1 && e.recv_at === sold.serverTime,
+    ),
+  );
+  const report = store.dailyReport(serverDay);
+  assert.equal(report.revenueCentimes, 1000);
+  assert.equal(report.tickets.count, 1);
+  assert.deepEqual(report, buildDay(store.pull(0, "office").events, { businessDate: serverDay, cutoff: "05:00" }));
 });
 
 test("a batch over 200 events or 512 KB is refused whole, nothing stored", async () => {
@@ -1219,4 +1473,12 @@ test("a day's numbers are recomputed when an event changes them, a bank of the d
   assert.notEqual(nextDay, day);
   assert.equal(store.dailyReport(/** @type {string} */ (nextDay)).revenueCentimes, 1200);
   assert.throws(() => store.dailyReport("2026-02-30"), RangeError);
+});
+
+test("the store's SQL binds plain ? placeholders, which node:sqlite binds from Node 22.13 (package.json engines)", () => {
+  const src = new URL("../src/", import.meta.url);
+  for (const file of readdirSync(src).filter((f) => f.endsWith(".js"))) {
+    const numbered = readFileSync(new URL(file, src), "utf8").match(/\?\d+\b/g);
+    assert.equal(numbered, null, `${file}: numbered placeholders ${numbered}`);
+  }
 });
